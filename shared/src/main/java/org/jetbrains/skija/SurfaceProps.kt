@@ -1,33 +1,18 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import lombok.*;
-import lombok.Data;
-import org.jetbrains.annotations.*;
-import org.jetbrains.skija.impl.*;
+import lombok.With
 
-@Data @With @AllArgsConstructor
-public class SurfaceProps {
-    @ApiStatus.Internal 
-    public final boolean _deviceIndependentFonts;
-    
-    @ApiStatus.Internal 
-    public final PixelGeometry _pixelGeometry;
+@With
+data class SurfaceProps @JvmOverloads constructor(
+    internal val _deviceIndependentFonts: Boolean = false,
+    internal val _pixelGeometry: PixelGeometry = PixelGeometry.UNKNOWN,
+) {
 
-    public SurfaceProps() {
-        this(false, PixelGeometry.UNKNOWN);
+    internal fun _getFlags(): Int {
+        return 0 or if (_deviceIndependentFonts) 1 else 0
     }
 
-    public SurfaceProps(PixelGeometry geo) {
-        this(false, geo);
-    }
-
-    @ApiStatus.Internal
-    public int _getFlags() {
-        return 0 | (_deviceIndependentFonts ? 1 : 0); 
-    }
-
-    @ApiStatus.Internal
-    public int _getPixelGeometryOrdinal() {
-        return _pixelGeometry.ordinal();
+    internal fun _getPixelGeometryOrdinal(): Int {
+        return _pixelGeometry.ordinal
     }
 }
