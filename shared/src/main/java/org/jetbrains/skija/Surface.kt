@@ -1,779 +1,1015 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import java.lang.ref.*;
-import org.jetbrains.annotations.*;
-import org.jetbrains.skija.impl.*;
+import org.jetbrains.annotations.Contract
+import org.jetbrains.skija.impl.Library
+import org.jetbrains.skija.impl.RefCnt
+import org.jetbrains.skija.impl.Stats
+import java.lang.ref.Reference
 
-public class Surface extends RefCnt {
-    static {
-        Library.staticLoad();
-    }
-
-    @ApiStatus.Internal public final DirectContext _context;
-    @ApiStatus.Internal public final BackendRenderTarget _renderTarget;
-
-    /**
-     * <p>Allocates raster Surface. Canvas returned by Surface draws directly into pixels.</p>
-     *
-     * <p>Surface is returned if all parameters are valid. Valid parameters include:</p>
-     * 
-     * <ul><li>info dimensions are greater than zero;</li>
-     * <li>info contains ColorType and AlphaType supported by raster surface;</li>
-     * <li>pixelsPtr is not 0;</li>
-     * <li>rowBytes is large enough to contain info width pixels of ColorType.</li></ul>
-     *
-     * <p>Pixel buffer size should be info height times computed rowBytes.</p>
-     * 
-     * <p>Pixels are not initialized.</p>
-     * 
-     * <p>To access pixels after drawing, peekPixels() or readPixels().</p>
-     *
-     * @param imageInfo     width, height, ColorType, AlphaType, ColorSpace,
-     *                      of raster surface; width and height must be greater than zero
-     * @param pixelsPtr     pointer to destination pixels buffer
-     * @param rowBytes      memory address of destination native pixels buffer
-     * @return              created Surface
-     */
-    @NotNull @Contract("_, _, _ -> new")
-    public static Surface makeRasterDirect(@NotNull ImageInfo imageInfo,
-                                           long pixelsPtr,
-                                           long rowBytes) {
-        return makeRasterDirect(imageInfo, pixelsPtr, rowBytes, null);
-    }
-
-    /**
-     * <p>Allocates raster Surface. Canvas returned by Surface draws directly into pixels.</p>
-     *
-     * <p>Surface is returned if all parameters are valid. Valid parameters include:</p>
-     * 
-     * <ul><li>info dimensions are greater than zero;</li>
-     * <li>info contains ColorType and AlphaType supported by raster surface;</li>
-     * <li>pixelsPtr is not 0;</li>
-     * <li>rowBytes is large enough to contain info width pixels of ColorType.</li></ul>
-     *
-     * <p>Pixel buffer size should be info height times computed rowBytes.</p>
-     * 
-     * <p>Pixels are not initialized.</p>
-     * 
-     * <p>To access pixels after drawing, peekPixels() or readPixels().</p>
-     *
-     * @param imageInfo     width, height, ColorType, AlphaType, ColorSpace,
-     *                      of raster surface; width and height must be greater than zero
-     * @param pixelsPtr     pointer to destination pixels buffer
-     * @param rowBytes      memory address of destination native pixels buffer
-     * @param surfaceProps  LCD striping orientation and setting for device independent fonts;
-     *                      may be null
-     * @return              created Surface
-     */
-    @NotNull @Contract("_, _, _, _ -> new")
-    public static Surface makeRasterDirect(@NotNull ImageInfo imageInfo,
-                                           long pixelsPtr,
-                                           long rowBytes,
-                                           @Nullable SurfaceProps surfaceProps) {
-        try {
-            assert imageInfo != null : "Can’t makeRasterDirect with imageInfo == null";
-            Stats.onNativeCall();
-            long ptr = _nMakeRasterDirect(
-                imageInfo._width,
-                imageInfo._height,
-                imageInfo._colorInfo._colorType.ordinal(),
-                imageInfo._colorInfo._alphaType.ordinal(),
-                Native.getPtr(imageInfo._colorInfo._colorSpace),
-                pixelsPtr,
-                rowBytes,
-                surfaceProps);
-            if (ptr == 0)
-                throw new IllegalArgumentException(String.format("Failed Surface.makeRasterDirect(%s, %d, %d, %s)", imageInfo, pixelsPtr, rowBytes, surfaceProps));
-            return new Surface(ptr);
-        } finally {
-            Reference.reachabilityFence(imageInfo._colorInfo._colorSpace);
+class Surface : RefCnt {
+    companion object {
+        /**
+         *
+         * Allocates raster Surface. Canvas returned by Surface draws directly into pixels.
+         *
+         *
+         * Surface is returned if all parameters are valid. Valid parameters include:
+         *
+         *  * info dimensions are greater than zero;
+         *  * info contains ColorType and AlphaType supported by raster surface;
+         *  * pixelsPtr is not 0;
+         *  * rowBytes is large enough to contain info width pixels of ColorType.
+         *
+         *
+         * Pixel buffer size should be info height times computed rowBytes.
+         *
+         *
+         * Pixels are not initialized.
+         *
+         *
+         * To access pixels after drawing, peekPixels() or readPixels().
+         *
+         * @param imageInfo     width, height, ColorType, AlphaType, ColorSpace,
+         * of raster surface; width and height must be greater than zero
+         * @param pixelsPtr     pointer to destination pixels buffer
+         * @param rowBytes      memory address of destination native pixels buffer
+         * @return              created Surface
+         */
+        @Contract("_, _, _ -> new")
+        fun makeRasterDirect(
+            imageInfo: ImageInfo,
+            pixelsPtr: Long,
+            rowBytes: Long
+        ): Surface {
+            return makeRasterDirect(imageInfo, pixelsPtr, rowBytes, null)
         }
-    }
 
-    /**
-     * <p>Allocates raster Surface. Canvas returned by Surface draws directly into pixels.
-     * Allocates and zeroes pixel memory. Pixel memory size is imageInfo.height() times imageInfo.minRowBytes().
-     * Pixel memory is deleted when Surface is deleted.</p>
-     * 
-     * <p>Surface is returned if all parameters are valid. Valid parameters include:</p>
-     * 
-     * <ul><li>info dimensions are greater than zero;</li>
-     * <li>info contains ColorType and AlphaType supported by raster surface;</li></ul>
-     * 
-     * @param imageInfo     width, height, ColorType, AlphaType, ColorSpace,
-     *                      of raster surface; width and height must be greater than zero
-     * @return              new Surface
-     */
-    @NotNull @Contract("_, _, _ -> new")
-    public static Surface makeRaster(@NotNull ImageInfo imageInfo) {
-        return makeRaster(imageInfo, 0, null);
-    }
-
-    /**
-     * <p>Allocates raster Surface. Canvas returned by Surface draws directly into pixels.
-     * Allocates and zeroes pixel memory. Pixel memory size is imageInfo.height() times
-     * rowBytes, or times imageInfo.minRowBytes() if rowBytes is zero.
-     * Pixel memory is deleted when Surface is deleted.</p>
-     * 
-     * <p>Surface is returned if all parameters are valid. Valid parameters include:</p>
-     * 
-     * <ul><li>info dimensions are greater than zero;</li>
-     * <li>info contains ColorType and AlphaType supported by raster surface;</li>
-     * <li>rowBytes is large enough to contain info width pixels of ColorType, or is zero.</li></ul>
-     * 
-     * <p>If rowBytes is zero, a suitable value will be chosen internally.</p>
-     * 
-     * @param imageInfo     width, height, ColorType, AlphaType, ColorSpace,
-     *                      of raster surface; width and height must be greater than zero
-     * @param rowBytes      interval from one Surface row to the next; may be zero
-     * @return              new Surface
-     */
-    @NotNull @Contract("_, _, _ -> new")
-    public static Surface makeRaster(@NotNull ImageInfo imageInfo,
-                                     long rowBytes) {
-        return makeRaster(imageInfo, rowBytes, null);
-    }
-
-    /**
-     * <p>Allocates raster Surface. Canvas returned by Surface draws directly into pixels.
-     * Allocates and zeroes pixel memory. Pixel memory size is imageInfo.height() times
-     * rowBytes, or times imageInfo.minRowBytes() if rowBytes is zero.
-     * Pixel memory is deleted when Surface is deleted.</p>
-     * 
-     * <p>Surface is returned if all parameters are valid. Valid parameters include:</p>
-     * 
-     * <ul><li>info dimensions are greater than zero;</li>
-     * <li>info contains ColorType and AlphaType supported by raster surface;</li>
-     * <li>rowBytes is large enough to contain info width pixels of ColorType, or is zero.</li></ul>
-     * 
-     * <p>If rowBytes is zero, a suitable value will be chosen internally.</p>
-     * 
-     * @param imageInfo     width, height, ColorType, AlphaType, ColorSpace,
-     *                      of raster surface; width and height must be greater than zero
-     * @param rowBytes      interval from one Surface row to the next; may be zero
-     * @param surfaceProps  LCD striping orientation and setting for device independent fonts;
-     *                      may be null
-     * @return              new Surface
-     */
-    @NotNull @Contract("_, _, _ -> new")
-    public static Surface makeRaster(@NotNull ImageInfo imageInfo,
-                                     long rowBytes,
-                                     @Nullable SurfaceProps surfaceProps) {
-        try {
-            assert imageInfo != null : "Can’t makeRaster with imageInfo == null";
-            Stats.onNativeCall();
-            long ptr = _nMakeRaster(
-                imageInfo._width,
-                imageInfo._height,
-                imageInfo._colorInfo._colorType.ordinal(),
-                imageInfo._colorInfo._alphaType.ordinal(),
-                Native.getPtr(imageInfo._colorInfo._colorSpace),
-                rowBytes,
-                surfaceProps);
-            if (ptr == 0)
-                throw new IllegalArgumentException(String.format("Failed Surface.makeRaster(%s, %d, %s)", imageInfo, rowBytes, surfaceProps));
-            return new Surface(ptr);
-        } finally {
-            Reference.reachabilityFence(imageInfo._colorInfo._colorSpace);
+        /**
+         *
+         * Allocates raster Surface. Canvas returned by Surface draws directly into pixels.
+         *
+         *
+         * Surface is returned if all parameters are valid. Valid parameters include:
+         *
+         *  * info dimensions are greater than zero;
+         *  * info contains ColorType and AlphaType supported by raster surface;
+         *  * pixelsPtr is not 0;
+         *  * rowBytes is large enough to contain info width pixels of ColorType.
+         *
+         *
+         * Pixel buffer size should be info height times computed rowBytes.
+         *
+         *
+         * Pixels are not initialized.
+         *
+         *
+         * To access pixels after drawing, peekPixels() or readPixels().
+         *
+         * @param imageInfo     width, height, ColorType, AlphaType, ColorSpace,
+         * of raster surface; width and height must be greater than zero
+         * @param pixelsPtr     pointer to destination pixels buffer
+         * @param rowBytes      memory address of destination native pixels buffer
+         * @param surfaceProps  LCD striping orientation and setting for device independent fonts;
+         * may be null
+         * @return              created Surface
+         */
+        @Contract("_, _, _, _ -> new")
+        fun makeRasterDirect(
+            imageInfo: ImageInfo,
+            pixelsPtr: Long,
+            rowBytes: Long,
+            surfaceProps: SurfaceProps?
+        ): Surface {
+            return try {
+                assert(imageInfo != null) { "Can’t makeRasterDirect with imageInfo == null" }
+                Stats.onNativeCall()
+                val ptr = _nMakeRasterDirect(
+                    imageInfo._width,
+                    imageInfo._height,
+                    imageInfo.colorInfo.colorType.ordinal,
+                    imageInfo.colorInfo.alphaType.ordinal,
+                    getPtr(imageInfo.colorInfo.colorSpace),
+                    pixelsPtr,
+                    rowBytes,
+                    surfaceProps
+                )
+                require(ptr != 0L) {
+                    String.format(
+                        "Failed Surface.makeRasterDirect(%s, %d, %d, %s)",
+                        imageInfo,
+                        pixelsPtr,
+                        rowBytes,
+                        surfaceProps
+                    )
+                }
+                Surface(ptr)
+            } finally {
+                Reference.reachabilityFence(imageInfo.colorInfo.colorSpace)
+            }
         }
-    }
 
-    /**
-     * <p>Wraps a GPU-backed buffer into {@link Surface}.</p>
-     *
-     * <p>Caller must ensure backendRenderTarget is valid for the lifetime of returned {@link Surface}.</p>
-     *
-     * <p>{@link Surface} is returned if all parameters are valid. backendRenderTarget is valid if its pixel
-     * configuration agrees with colorSpace and context;
-     * for instance, if backendRenderTarget has an sRGB configuration, then context must support sRGB,
-     * and colorSpace must be present. Further, backendRenderTarget width and height must not exceed
-     * context capabilities, and the context must be able to support back-end render targets.</p>
-     *
-     * @param context       GPU context
-     * @param rt            texture residing on GPU
-     * @param origin        surfaceOrigin pins either the top-left or the bottom-left corner to the origin.
-     * @param colorFormat   color format
-     * @param colorSpace    range of colors; may be null
-     * @return              Surface if all parameters are valid; otherwise, null
-     * @see <a href="https://fiddle.skia.org/c/@Surface_MakeFromBackendTexture">https://fiddle.skia.org/c/@Surface_MakeFromBackendTexture</a>
-     */
-    @NotNull
-    public static Surface makeFromBackendRenderTarget(@NotNull DirectContext context,
-                                                      @NotNull BackendRenderTarget rt,
-                                                      @NotNull SurfaceOrigin origin,
-                                                      @NotNull SurfaceColorFormat colorFormat,
-                                                      @Nullable ColorSpace colorSpace) {
-        return makeFromBackendRenderTarget(context, rt, origin, colorFormat, colorSpace, null);
-    }
-    /**
-     * <p>Wraps a GPU-backed buffer into {@link Surface}.</p>
-     *
-     * <p>Caller must ensure backendRenderTarget is valid for the lifetime of returned {@link Surface}.</p>
-     *
-     * <p>{@link Surface} is returned if all parameters are valid. backendRenderTarget is valid if its pixel
-     * configuration agrees with colorSpace and context;
-     * for instance, if backendRenderTarget has an sRGB configuration, then context must support sRGB,
-     * and colorSpace must be present. Further, backendRenderTarget width and height must not exceed
-     * context capabilities, and the context must be able to support back-end render targets.</p>
-     *
-     * @param context       GPU context
-     * @param rt            texture residing on GPU
-     * @param origin        surfaceOrigin pins either the top-left or the bottom-left corner to the origin.
-     * @param colorFormat   color format
-     * @param colorSpace    range of colors; may be null
-     * @param surfaceProps  LCD striping orientation and setting for device independent fonts; may be null
-     * @return              Surface if all parameters are valid; otherwise, null
-     * @see <a href="https://fiddle.skia.org/c/@Surface_MakeFromBackendTexture">https://fiddle.skia.org/c/@Surface_MakeFromBackendTexture</a>
-     */
-    @NotNull
-    public static Surface makeFromBackendRenderTarget(@NotNull DirectContext context,
-                                                      @NotNull BackendRenderTarget rt,
-                                                      @NotNull SurfaceOrigin origin,
-                                                      @NotNull SurfaceColorFormat colorFormat,
-                                                      @Nullable ColorSpace colorSpace,
-                                                      @Nullable SurfaceProps surfaceProps) {
-        try {
-            assert context != null : "Can’t makeFromBackendRenderTarget with context == null";
-            assert rt != null : "Can’t makeFromBackendRenderTarget with rt == null";
-            assert origin != null : "Can’t makeFromBackendRenderTarget with origin == null";
-            assert colorFormat != null : "Can’t makeFromBackendRenderTarget with colorFormat == null";
-            Stats.onNativeCall();
-            long ptr = _nMakeFromBackendRenderTarget(Native.getPtr(context), Native.getPtr(rt), origin.ordinal(), colorFormat.ordinal(), Native.getPtr(colorSpace), surfaceProps);
-            if (ptr == 0)
-                throw new IllegalArgumentException(String.format("Failed Surface.makeFromBackendRenderTarget(%s, %s, %s, %s, %s)", context, rt, origin, colorFormat, colorSpace));
-            return new Surface(ptr, context, rt);
-        } finally {
-            Reference.reachabilityFence(context);
-            Reference.reachabilityFence(rt);
-            Reference.reachabilityFence(colorSpace);
+        /**
+         *
+         * Allocates raster Surface. Canvas returned by Surface draws directly into pixels.
+         * Allocates and zeroes pixel memory. Pixel memory size is imageInfo.height() times imageInfo.minRowBytes().
+         * Pixel memory is deleted when Surface is deleted.
+         *
+         *
+         * Surface is returned if all parameters are valid. Valid parameters include:
+         *
+         *  * info dimensions are greater than zero;
+         *  * info contains ColorType and AlphaType supported by raster surface;
+         *
+         * @param imageInfo     width, height, ColorType, AlphaType, ColorSpace,
+         * of raster surface; width and height must be greater than zero
+         * @return              new Surface
+         */
+        @Contract("_, _, _ -> new")
+        fun makeRaster(imageInfo: ImageInfo): Surface {
+            return makeRaster(imageInfo, 0, null)
         }
-    }
 
-    @NotNull
-    public static Surface makeFromMTKView(@NotNull DirectContext context,
-                                          long mtkViewPtr,
-                                          @NotNull SurfaceOrigin origin,
-                                          int sampleCount,
-                                          @NotNull SurfaceColorFormat colorFormat,
-                                          @Nullable ColorSpace colorSpace,
-                                          @Nullable SurfaceProps surfaceProps) {
-        try {
-            assert context != null : "Can’t makeFromBackendRenderTarget with context == null";
-            assert origin != null : "Can’t makeFromBackendRenderTarget with origin == null";
-            assert colorFormat != null : "Can’t makeFromBackendRenderTarget with colorFormat == null";
-            Stats.onNativeCall();
-            long ptr = _nMakeFromMTKView(Native.getPtr(context), mtkViewPtr, origin.ordinal(), sampleCount, colorFormat.ordinal(), Native.getPtr(colorSpace), surfaceProps);
-            if (ptr == 0)
-                throw new IllegalArgumentException(String.format("Failed Surface.makeFromMTKView(%s, %s, %s, %s, %s, %s)", context, mtkViewPtr, origin, colorFormat, colorSpace, surfaceProps));
-            return new Surface(ptr, context);
-        } finally {
-            Reference.reachabilityFence(context);
-            Reference.reachabilityFence(colorSpace);
+        /**
+         *
+         * Allocates raster Surface. Canvas returned by Surface draws directly into pixels.
+         * Allocates and zeroes pixel memory. Pixel memory size is imageInfo.height() times
+         * rowBytes, or times imageInfo.minRowBytes() if rowBytes is zero.
+         * Pixel memory is deleted when Surface is deleted.
+         *
+         *
+         * Surface is returned if all parameters are valid. Valid parameters include:
+         *
+         *  * info dimensions are greater than zero;
+         *  * info contains ColorType and AlphaType supported by raster surface;
+         *  * rowBytes is large enough to contain info width pixels of ColorType, or is zero.
+         *
+         *
+         * If rowBytes is zero, a suitable value will be chosen internally.
+         *
+         * @param imageInfo     width, height, ColorType, AlphaType, ColorSpace,
+         * of raster surface; width and height must be greater than zero
+         * @param rowBytes      interval from one Surface row to the next; may be zero
+         * @return              new Surface
+         */
+        @Contract("_, _, _ -> new")
+        fun makeRaster(
+            imageInfo: ImageInfo,
+            rowBytes: Long
+        ): Surface {
+            return makeRaster(imageInfo, rowBytes, null)
         }
-    }
 
-    /**
-     * <p>Allocates raster {@link Surface}.</p>
-     *
-     * <p>Canvas returned by Surface draws directly into pixels. Allocates and zeroes pixel memory.
-     * Pixel memory size is height times width times four. Pixel memory is deleted when Surface is deleted.</p>
-     *
-     * <p>Internally, sets ImageInfo to width, height, native color type, and ColorAlphaType.PREMUL.</p>
-     *
-     * <p>Surface is returned if width and height are greater than zero.</p>
-     *
-     * <p>Use to create Surface that matches PMColor, the native pixel arrangement on the platform.
-     * Surface drawn to output device skips converting its pixel format.</p>
-     *
-     * @param width  pixel column count; must be greater than zero
-     * @param height pixel row count; must be greater than zero
-     * @return Surface if all parameters are valid; otherwise, null
-     * @see <a href="https://fiddle.skia.org/c/@Surface_MakeRasterN32Premul">https://fiddle.skia.org/c/@Surface_MakeRasterN32Premul</a>
-     */
-    @NotNull
-    public static Surface makeRasterN32Premul(int width, int height) {
-        Stats.onNativeCall();
-        long ptr = _nMakeRasterN32Premul(width, height);
-        if (ptr == 0)
-            throw new IllegalArgumentException(String.format("Failed Surface.makeRasterN32Premul(%d, %d)", width, height));
-        return new Surface(ptr);
-    }
+        /**
+         *
+         * Allocates raster Surface. Canvas returned by Surface draws directly into pixels.
+         * Allocates and zeroes pixel memory. Pixel memory size is imageInfo.height() times
+         * rowBytes, or times imageInfo.minRowBytes() if rowBytes is zero.
+         * Pixel memory is deleted when Surface is deleted.
+         *
+         *
+         * Surface is returned if all parameters are valid. Valid parameters include:
+         *
+         *  * info dimensions are greater than zero;
+         *  * info contains ColorType and AlphaType supported by raster surface;
+         *  * rowBytes is large enough to contain info width pixels of ColorType, or is zero.
+         *
+         *
+         * If rowBytes is zero, a suitable value will be chosen internally.
+         *
+         * @param imageInfo     width, height, ColorType, AlphaType, ColorSpace,
+         * of raster surface; width and height must be greater than zero
+         * @param rowBytes      interval from one Surface row to the next; may be zero
+         * @param surfaceProps  LCD striping orientation and setting for device independent fonts;
+         * may be null
+         * @return              new Surface
+         */
+        @Contract("_, _, _ -> new")
+        fun makeRaster(
+            imageInfo: ImageInfo,
+            rowBytes: Long,
+            surfaceProps: SurfaceProps?
+        ): Surface {
+            return try {
+                assert(imageInfo != null) { "Can’t makeRaster with imageInfo == null" }
+                Stats.onNativeCall()
+                val ptr = _nMakeRaster(
+                    imageInfo._width,
+                    imageInfo._height,
+                    imageInfo.colorInfo.colorType.ordinal,
+                    imageInfo.colorInfo.alphaType.ordinal,
+                    getPtr(imageInfo.colorInfo.colorSpace),
+                    rowBytes,
+                    surfaceProps
+                )
+                require(ptr != 0L) {
+                    String.format(
+                        "Failed Surface.makeRaster(%s, %d, %s)",
+                        imageInfo,
+                        rowBytes,
+                        surfaceProps
+                    )
+                }
+                Surface(ptr)
+            } finally {
+                Reference.reachabilityFence(imageInfo.colorInfo.colorSpace)
+            }
+        }
+        /**
+         *
+         * Wraps a GPU-backed buffer into [Surface].
+         *
+         *
+         * Caller must ensure backendRenderTarget is valid for the lifetime of returned [Surface].
+         *
+         *
+         * [Surface] is returned if all parameters are valid. backendRenderTarget is valid if its pixel
+         * configuration agrees with colorSpace and context;
+         * for instance, if backendRenderTarget has an sRGB configuration, then context must support sRGB,
+         * and colorSpace must be present. Further, backendRenderTarget width and height must not exceed
+         * context capabilities, and the context must be able to support back-end render targets.
+         *
+         * @param context       GPU context
+         * @param rt            texture residing on GPU
+         * @param origin        surfaceOrigin pins either the top-left or the bottom-left corner to the origin.
+         * @param colorFormat   color format
+         * @param colorSpace    range of colors; may be null
+         * @param surfaceProps  LCD striping orientation and setting for device independent fonts; may be null
+         * @return              Surface if all parameters are valid; otherwise, null
+         * @see [https://fiddle.skia.org/c/@Surface_MakeFromBackendTexture](https://fiddle.skia.org/c/@Surface_MakeFromBackendTexture)
+         */
+        /**
+         *
+         * Wraps a GPU-backed buffer into [Surface].
+         *
+         *
+         * Caller must ensure backendRenderTarget is valid for the lifetime of returned [Surface].
+         *
+         *
+         * [Surface] is returned if all parameters are valid. backendRenderTarget is valid if its pixel
+         * configuration agrees with colorSpace and context;
+         * for instance, if backendRenderTarget has an sRGB configuration, then context must support sRGB,
+         * and colorSpace must be present. Further, backendRenderTarget width and height must not exceed
+         * context capabilities, and the context must be able to support back-end render targets.
+         *
+         * @param context       GPU context
+         * @param rt            texture residing on GPU
+         * @param origin        surfaceOrigin pins either the top-left or the bottom-left corner to the origin.
+         * @param colorFormat   color format
+         * @param colorSpace    range of colors; may be null
+         * @return              Surface if all parameters are valid; otherwise, null
+         * @see [https://fiddle.skia.org/c/@Surface_MakeFromBackendTexture](https://fiddle.skia.org/c/@Surface_MakeFromBackendTexture)
+         */
+        @JvmOverloads
+        fun makeFromBackendRenderTarget(
+            context: DirectContext,
+            rt: BackendRenderTarget,
+            origin: SurfaceOrigin,
+            colorFormat: SurfaceColorFormat,
+            colorSpace: ColorSpace?,
+            surfaceProps: SurfaceProps? = null
+        ): Surface {
+            return try {
+                assert(context != null) { "Can’t makeFromBackendRenderTarget with context == null" }
+                assert(rt != null) { "Can’t makeFromBackendRenderTarget with rt == null" }
+                assert(origin != null) { "Can’t makeFromBackendRenderTarget with origin == null" }
+                assert(colorFormat != null) { "Can’t makeFromBackendRenderTarget with colorFormat == null" }
+                Stats.onNativeCall()
+                val ptr = _nMakeFromBackendRenderTarget(
+                    getPtr(context),
+                    getPtr(rt),
+                    origin.ordinal,
+                    colorFormat.ordinal,
+                    getPtr(colorSpace),
+                    surfaceProps
+                )
+                require(ptr != 0L) {
+                    String.format(
+                        "Failed Surface.makeFromBackendRenderTarget(%s, %s, %s, %s, %s)",
+                        context,
+                        rt,
+                        origin,
+                        colorFormat,
+                        colorSpace
+                    )
+                }
+                Surface(ptr, context, rt)
+            } finally {
+                Reference.reachabilityFence(context)
+                Reference.reachabilityFence(rt)
+                Reference.reachabilityFence(colorSpace)
+            }
+        }
 
-    /**
-     * <p>Returns Surface on GPU indicated by context. Allocates memory for
-     * pixels, based on the width, height, and ColorType in ImageInfo.
-     * describes the pixel format in ColorType, and transparency in
-     * AlphaType, and color matching in ColorSpace.</p>
-     *
-     * @param context               GPU context
-     * @param budgeted              selects whether allocation for pixels is tracked by context
-     * @param imageInfo             width, height, ColorType, AlphaType, ColorSpace;
-     *                              width, or height, or both, may be zero
-     * @return                      new SkSurface
-     */
-    @NotNull @Contract("_, _, _ -> new")
-    public static Surface makeRenderTarget(@NotNull DirectContext context,
-                                           boolean budgeted,
-                                           @NotNull ImageInfo imageInfo) {
-        return makeRenderTarget(context, budgeted, imageInfo, 0, SurfaceOrigin.BOTTOM_LEFT, null, false);
-    }
+        fun makeFromMTKView(
+            context: DirectContext,
+            mtkViewPtr: Long,
+            origin: SurfaceOrigin,
+            sampleCount: Int,
+            colorFormat: SurfaceColorFormat,
+            colorSpace: ColorSpace?,
+            surfaceProps: SurfaceProps?
+        ): Surface {
+            return try {
+                assert(context != null) { "Can’t makeFromBackendRenderTarget with context == null" }
+                assert(origin != null) { "Can’t makeFromBackendRenderTarget with origin == null" }
+                assert(colorFormat != null) { "Can’t makeFromBackendRenderTarget with colorFormat == null" }
+                Stats.onNativeCall()
+                val ptr = _nMakeFromMTKView(
+                    getPtr(context),
+                    mtkViewPtr,
+                    origin.ordinal,
+                    sampleCount,
+                    colorFormat.ordinal,
+                    getPtr(colorSpace),
+                    surfaceProps
+                )
+                require(ptr != 0L) {
+                    String.format(
+                        "Failed Surface.makeFromMTKView(%s, %s, %s, %s, %s, %s)",
+                        context,
+                        mtkViewPtr,
+                        origin,
+                        colorFormat,
+                        colorSpace,
+                        surfaceProps
+                    )
+                }
+                Surface(ptr, context)
+            } finally {
+                Reference.reachabilityFence(context)
+                Reference.reachabilityFence(colorSpace)
+            }
+        }
 
-    /**
-     * <p>Returns Surface on GPU indicated by context. Allocates memory for
-     * pixels, based on the width, height, and ColorType in ImageInfo.
-     * describes the pixel format in ColorType, and transparency in
-     * AlphaType, and color matching in ColorSpace.</p>
-     *
-     * <p>sampleCount requests the number of samples per pixel.
-     * Pass zero to disable multi-sample anti-aliasing.  The request is rounded
-     * up to the next supported count, or rounded down if it is larger than the
-     * maximum supported count.</p>
-     *
-     * @param context               GPU context
-     * @param budgeted              selects whether allocation for pixels is tracked by context
-     * @param imageInfo             width, height, ColorType, AlphaType, ColorSpace;
-     *                              width, or height, or both, may be zero
-     * @param sampleCount           samples per pixel, or 0 to disable full scene anti-aliasing
-     * @param surfaceProps          LCD striping orientation and setting for device independent
-     *                               fonts; may be null
-     * @return                      new SkSurface
-     */
-    @NotNull @Contract("_, _, _, _, _ -> new")
-    public static Surface makeRenderTarget(@NotNull DirectContext context,
-                                           boolean budgeted,
-                                           @NotNull ImageInfo imageInfo,
-                                           int sampleCount,
-                                           @Nullable SurfaceProps surfaceProps) {
-        return makeRenderTarget(context, budgeted, imageInfo, sampleCount, SurfaceOrigin.BOTTOM_LEFT, surfaceProps, false);
-    }
+        /**
+         *
+         * Allocates raster [Surface].
+         *
+         *
+         * Canvas returned by Surface draws directly into pixels. Allocates and zeroes pixel memory.
+         * Pixel memory size is height times width times four. Pixel memory is deleted when Surface is deleted.
+         *
+         *
+         * Internally, sets ImageInfo to width, height, native color type, and ColorAlphaType.PREMUL.
+         *
+         *
+         * Surface is returned if width and height are greater than zero.
+         *
+         *
+         * Use to create Surface that matches PMColor, the native pixel arrangement on the platform.
+         * Surface drawn to output device skips converting its pixel format.
+         *
+         * @param width  pixel column count; must be greater than zero
+         * @param height pixel row count; must be greater than zero
+         * @return Surface if all parameters are valid; otherwise, null
+         * @see [https://fiddle.skia.org/c/@Surface_MakeRasterN32Premul](https://fiddle.skia.org/c/@Surface_MakeRasterN32Premul)
+         */
+        fun makeRasterN32Premul(width: Int, height: Int): Surface {
+            Stats.onNativeCall()
+            val ptr = _nMakeRasterN32Premul(width, height)
+            require(ptr != 0L) { String.format("Failed Surface.makeRasterN32Premul(%d, %d)", width, height) }
+            return Surface(ptr)
+        }
 
-    /**
-     * <p>Returns Surface on GPU indicated by context. Allocates memory for
-     * pixels, based on the width, height, and ColorType in ImageInfo.
-     * describes the pixel format in ColorType, and transparency in
-     * AlphaType, and color matching in ColorSpace.</p>
-     *
-     * <p>sampleCount requests the number of samples per pixel.
-     * Pass zero to disable multi-sample anti-aliasing.  The request is rounded
-     * up to the next supported count, or rounded down if it is larger than the
-     * maximum supported count.</p>
-     *
-     * @param context               GPU context
-     * @param budgeted              selects whether allocation for pixels is tracked by context
-     * @param imageInfo             width, height, ColorType, AlphaType, ColorSpace;
-     *                              width, or height, or both, may be zero
-     * @param sampleCount           samples per pixel, or 0 to disable full scene anti-aliasing
-     * @param origin                pins either the top-left or the bottom-left corner to the origin.
-     * @param surfaceProps          LCD striping orientation and setting for device independent
-     *                               fonts; may be null
-     * @return                      new SkSurface
-     */
-    @NotNull @Contract("_, _, _, _, _, _ -> new")
-    public static Surface makeRenderTarget(@NotNull DirectContext context,
-                                           boolean budgeted,
-                                           @NotNull ImageInfo imageInfo,
-                                           int sampleCount,
-                                           @NotNull SurfaceOrigin origin,
-                                           @Nullable SurfaceProps surfaceProps) {
-        return makeRenderTarget(context, budgeted, imageInfo, sampleCount, origin, surfaceProps, false);
-    }
+        /**
+         *
+         * Returns Surface on GPU indicated by context. Allocates memory for
+         * pixels, based on the width, height, and ColorType in ImageInfo.
+         * describes the pixel format in ColorType, and transparency in
+         * AlphaType, and color matching in ColorSpace.
+         *
+         * @param context               GPU context
+         * @param budgeted              selects whether allocation for pixels is tracked by context
+         * @param imageInfo             width, height, ColorType, AlphaType, ColorSpace;
+         * width, or height, or both, may be zero
+         * @return                      new SkSurface
+         */
+        @Contract("_, _, _ -> new")
+        fun makeRenderTarget(
+            context: DirectContext,
+            budgeted: Boolean,
+            imageInfo: ImageInfo
+        ): Surface {
+            return makeRenderTarget(context, budgeted, imageInfo, 0, SurfaceOrigin.BOTTOM_LEFT, null, false)
+        }
 
-    /**
-     * <p>Returns Surface on GPU indicated by context. Allocates memory for
-     * pixels, based on the width, height, and ColorType in ImageInfo.
-     * describes the pixel format in ColorType, and transparency in
-     * AlphaType, and color matching in ColorSpace.</p>
-     *
-     * <p>sampleCount requests the number of samples per pixel.
-     * Pass zero to disable multi-sample anti-aliasing.  The request is rounded
-     * up to the next supported count, or rounded down if it is larger than the
-     * maximum supported count.</p>
-     *
-     * <p>shouldCreateWithMips hints that Image returned by {@link #makeImageSnapshot()} is mip map.</p>
-     *
-     * @param context               GPU context
-     * @param budgeted              selects whether allocation for pixels is tracked by context
-     * @param imageInfo             width, height, ColorType, AlphaType, ColorSpace;
-     *                              width, or height, or both, may be zero
-     * @param sampleCount           samples per pixel, or 0 to disable full scene anti-aliasing
-     * @param origin                pins either the top-left or the bottom-left corner to the origin.
-     * @param surfaceProps          LCD striping orientation and setting for device independent
-     *                               fonts; may be null
-     * @param shouldCreateWithMips  hint that SkSurface will host mip map images
-     * @return                      new SkSurface
-     */
-    @NotNull @Contract("_, _, _, _, _, _, _ -> new")
-    public static Surface makeRenderTarget(@NotNull DirectContext context,
-                                           boolean budgeted,
-                                           @NotNull ImageInfo imageInfo,
-                                           int sampleCount,
-                                           @NotNull SurfaceOrigin origin,
-                                           @Nullable SurfaceProps surfaceProps,
-                                           boolean shouldCreateWithMips) {
-        try {
-            assert context != null : "Can’t makeFromBackendRenderTarget with context == null";
-            assert imageInfo != null : "Can’t makeFromBackendRenderTarget with imageInfo == null";
-            assert origin != null : "Can’t makeFromBackendRenderTarget with origin == null";            
-            Stats.onNativeCall();
-            long ptr = _nMakeRenderTarget(
-                Native.getPtr(context),
+        /**
+         *
+         * Returns Surface on GPU indicated by context. Allocates memory for
+         * pixels, based on the width, height, and ColorType in ImageInfo.
+         * describes the pixel format in ColorType, and transparency in
+         * AlphaType, and color matching in ColorSpace.
+         *
+         *
+         * sampleCount requests the number of samples per pixel.
+         * Pass zero to disable multi-sample anti-aliasing.  The request is rounded
+         * up to the next supported count, or rounded down if it is larger than the
+         * maximum supported count.
+         *
+         * @param context               GPU context
+         * @param budgeted              selects whether allocation for pixels is tracked by context
+         * @param imageInfo             width, height, ColorType, AlphaType, ColorSpace;
+         * width, or height, or both, may be zero
+         * @param sampleCount           samples per pixel, or 0 to disable full scene anti-aliasing
+         * @param surfaceProps          LCD striping orientation and setting for device independent
+         * fonts; may be null
+         * @return                      new SkSurface
+         */
+        @Contract("_, _, _, _, _ -> new")
+        fun makeRenderTarget(
+            context: DirectContext,
+            budgeted: Boolean,
+            imageInfo: ImageInfo,
+            sampleCount: Int,
+            surfaceProps: SurfaceProps?
+        ): Surface {
+            return makeRenderTarget(
+                context,
                 budgeted,
-                imageInfo._width,
-                imageInfo._height,
-                imageInfo._colorInfo._colorType.ordinal(),
-                imageInfo._colorInfo._alphaType.ordinal(),
-                Native.getPtr(imageInfo._colorInfo._colorSpace),
+                imageInfo,
                 sampleCount,
-                origin.ordinal(),
+                SurfaceOrigin.BOTTOM_LEFT,
                 surfaceProps,
-                shouldCreateWithMips);
-            if (ptr == 0)
-                throw new IllegalArgumentException(String.format("Failed Surface.makeRenderTarget(%s, %b, %s, %d, %s, %s, %b)", context, budgeted, imageInfo, sampleCount, origin, surfaceProps, shouldCreateWithMips));
-            return new Surface(ptr, context);
-        } finally {
-            Reference.reachabilityFence(context);
-            Reference.reachabilityFence(imageInfo._colorInfo._colorSpace);
+                false
+            )
+        }
+
+        /**
+         *
+         * Returns Surface on GPU indicated by context. Allocates memory for
+         * pixels, based on the width, height, and ColorType in ImageInfo.
+         * describes the pixel format in ColorType, and transparency in
+         * AlphaType, and color matching in ColorSpace.
+         *
+         *
+         * sampleCount requests the number of samples per pixel.
+         * Pass zero to disable multi-sample anti-aliasing.  The request is rounded
+         * up to the next supported count, or rounded down if it is larger than the
+         * maximum supported count.
+         *
+         * @param context               GPU context
+         * @param budgeted              selects whether allocation for pixels is tracked by context
+         * @param imageInfo             width, height, ColorType, AlphaType, ColorSpace;
+         * width, or height, or both, may be zero
+         * @param sampleCount           samples per pixel, or 0 to disable full scene anti-aliasing
+         * @param origin                pins either the top-left or the bottom-left corner to the origin.
+         * @param surfaceProps          LCD striping orientation and setting for device independent
+         * fonts; may be null
+         * @return                      new SkSurface
+         */
+        @Contract("_, _, _, _, _, _ -> new")
+        fun makeRenderTarget(
+            context: DirectContext,
+            budgeted: Boolean,
+            imageInfo: ImageInfo,
+            sampleCount: Int,
+            origin: SurfaceOrigin,
+            surfaceProps: SurfaceProps?
+        ): Surface {
+            return makeRenderTarget(context, budgeted, imageInfo, sampleCount, origin, surfaceProps, false)
+        }
+
+        /**
+         *
+         * Returns Surface on GPU indicated by context. Allocates memory for
+         * pixels, based on the width, height, and ColorType in ImageInfo.
+         * describes the pixel format in ColorType, and transparency in
+         * AlphaType, and color matching in ColorSpace.
+         *
+         *
+         * sampleCount requests the number of samples per pixel.
+         * Pass zero to disable multi-sample anti-aliasing.  The request is rounded
+         * up to the next supported count, or rounded down if it is larger than the
+         * maximum supported count.
+         *
+         *
+         * shouldCreateWithMips hints that Image returned by [.makeImageSnapshot] is mip map.
+         *
+         * @param context               GPU context
+         * @param budgeted              selects whether allocation for pixels is tracked by context
+         * @param imageInfo             width, height, ColorType, AlphaType, ColorSpace;
+         * width, or height, or both, may be zero
+         * @param sampleCount           samples per pixel, or 0 to disable full scene anti-aliasing
+         * @param origin                pins either the top-left or the bottom-left corner to the origin.
+         * @param surfaceProps          LCD striping orientation and setting for device independent
+         * fonts; may be null
+         * @param shouldCreateWithMips  hint that SkSurface will host mip map images
+         * @return                      new SkSurface
+         */
+        @Contract("_, _, _, _, _, _, _ -> new")
+        fun makeRenderTarget(
+            context: DirectContext?,
+            budgeted: Boolean,
+            imageInfo: ImageInfo?,
+            sampleCount: Int,
+            origin: SurfaceOrigin?,
+            surfaceProps: SurfaceProps?,
+            shouldCreateWithMips: Boolean
+        ): Surface {
+            return try {
+                requireNotNull(context) { "Can’t makeFromBackendRenderTarget with context == null" }
+                requireNotNull(imageInfo) { "Can’t makeFromBackendRenderTarget with imageInfo == null" }
+                requireNotNull(origin) { "Can’t makeFromBackendRenderTarget with origin == null" }
+                Stats.onNativeCall()
+                val ptr = _nMakeRenderTarget(
+                    getPtr(context),
+                    budgeted,
+                    imageInfo._width,
+                    imageInfo._height,
+                    imageInfo.colorInfo.colorType.ordinal,
+                    imageInfo.colorInfo.alphaType.ordinal,
+                    getPtr(imageInfo.colorInfo.colorSpace),
+                    sampleCount,
+                    origin.ordinal,
+                    surfaceProps,
+                    shouldCreateWithMips
+                )
+                require(ptr != 0L) {
+                    String.format(
+                        "Failed Surface.makeRenderTarget(%s, %b, %s, %d, %s, %s, %b)",
+                        context,
+                        budgeted,
+                        imageInfo,
+                        sampleCount,
+                        origin,
+                        surfaceProps,
+                        shouldCreateWithMips
+                    )
+                }
+                Surface(ptr, context)
+            } finally {
+                Reference.reachabilityFence(context)
+                Reference.reachabilityFence(imageInfo?.colorInfo?.colorSpace)
+            }
+        }
+
+        /**
+         * Returns Surface without backing pixels. Drawing to Canvas returned from Surface
+         * has no effect. Calling makeImageSnapshot() on returned Surface returns null.
+         *
+         * @param width   one or greater
+         * @param height  one or greater
+         * @return        Surface if width and height are positive
+         *
+         * @see [https://fiddle.skia.org/c/@Surface_MakeNull](https://fiddle.skia.org/c/@Surface_MakeNull)
+         */
+        @Contract("_, _ -> new")
+        fun makeNull(width: Int, height: Int): Surface {
+            Stats.onNativeCall()
+            val ptr = _nMakeNull(width, height)
+            require(ptr != 0L) { String.format("Failed Surface.makeNull(%d, %d)", width, height) }
+            return Surface(ptr)
+        }
+
+        external fun _nMakeRasterDirect(
+            width: Int,
+            height: Int,
+            colorType: Int,
+            alphaType: Int,
+            colorSpacePtr: Long,
+            pixelsPtr: Long,
+            rowBytes: Long,
+            surfaceProps: SurfaceProps?
+        ): Long
+
+        external fun _nMakeRaster(
+            width: Int,
+            height: Int,
+            colorType: Int,
+            alphaType: Int,
+            colorSpacePtr: Long,
+            rowBytes: Long,
+            surfaceProps: SurfaceProps?
+        ): Long
+
+        external fun _nMakeRasterN32Premul(width: Int, height: Int): Long
+        external fun _nMakeFromBackendRenderTarget(
+            pContext: Long,
+            pBackendRenderTarget: Long,
+            surfaceOrigin: Int,
+            colorType: Int,
+            colorSpacePtr: Long,
+            surfaceProps: SurfaceProps?
+        ): Long
+
+        external fun _nMakeFromMTKView(
+            contextPtr: Long,
+            mtkViewPtr: Long,
+            surfaceOrigin: Int,
+            sampleCount: Int,
+            colorType: Int,
+            colorSpacePtr: Long,
+            surfaceProps: SurfaceProps?
+        ): Long
+
+        external fun _nMakeRenderTarget(
+            contextPtr: Long,
+            budgeted: Boolean,
+            width: Int,
+            height: Int,
+            colorType: Int,
+            alphaType: Int,
+            colorSpacePtr: Long,
+            sampleCount: Int,
+            surfaceOrigin: Int,
+            surfaceProps: SurfaceProps?,
+            shouldCreateWithMips: Boolean
+        ): Long
+
+        external fun _nMakeNull(width: Int, height: Int): Long
+        external fun _nGetWidth(ptr: Long): Int
+        external fun _nGetHeight(ptr: Long): Int
+        external fun _nGetImageInfo(ptr: Long): ImageInfo
+        external fun _nGenerationId(ptr: Long): Int
+        external fun _nNotifyContentWillChange(ptr: Long, mode: Int)
+        external fun _nGetRecordingContext(ptr: Long): Long
+        external fun _nGetCanvas(ptr: Long): Long
+        external fun _nMakeSurfaceI(
+            ptr: Long,
+            width: Int,
+            height: Int,
+            colorType: Int,
+            alphaType: Int,
+            colorSpacePtr: Long
+        ): Long
+
+        external fun _nMakeSurface(ptr: Long, width: Int, height: Int): Long
+        external fun _nMakeImageSnapshot(ptr: Long): Long
+        external fun _nMakeImageSnapshotR(ptr: Long, left: Int, top: Int, right: Int, bottom: Int): Long
+        external fun _nDraw(ptr: Long, canvasPtr: Long, x: Float, y: Float, paintPtr: Long)
+        external fun _nReadPixels(ptr: Long, bitmapPtr: Long, srcX: Int, srcY: Int): Boolean
+        external fun _nWritePixels(ptr: Long, bitmapPtr: Long, x: Int, y: Int)
+        external fun _nFlushAndSubmit(ptr: Long, syncCpu: Boolean)
+        external fun _nFlush(ptr: Long)
+        external fun _nUnique(ptr: Long): Boolean
+
+        init {
+            Library.staticLoad()
         }
     }
 
-    /** 
-     * Returns Surface without backing pixels. Drawing to Canvas returned from Surface
-     * has no effect. Calling makeImageSnapshot() on returned Surface returns null.
-     *
-     * @param width   one or greater
-     * @param height  one or greater
-     * @return        Surface if width and height are positive
-     *
-     * @see <a href="https://fiddle.skia.org/c/@Surface_MakeNull">https://fiddle.skia.org/c/@Surface_MakeNull</a>
-     */
-    @NotNull @Contract("_, _ -> new")
-    public static Surface makeNull(int width, int height) {
-        Stats.onNativeCall();
-        long ptr = _nMakeNull(width, height);
-        if (ptr == 0)
-            throw new IllegalArgumentException(String.format("Failed Surface.makeNull(%d, %d)", width, height));
-        return new Surface(ptr);
-    }
+    internal val _context: DirectContext?
+
+    internal val _renderTarget: BackendRenderTarget?
 
     /**
-     * <p>Returns pixel count in each row; may be zero or greater.</p>
+     *
+     * Returns pixel count in each row; may be zero or greater.
      *
      * @return number of pixel columns
-     * @see <a href="https://fiddle.skia.org/c/@Surface_width">https://fiddle.skia.org/c/@Surface_width</a>
+     * @see [https://fiddle.skia.org/c/@Surface_width](https://fiddle.skia.org/c/@Surface_width)
      */
-    public int getWidth() {
-        try {
-            Stats.onNativeCall();
-            return _nGetWidth(_ptr);
+    val width: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGetWidth(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
-     * <p>Returns pixel row count; may be zero or greater.</p>
+     *
+     * Returns pixel row count; may be zero or greater.
      *
      * @return number of pixel rows
-     * @see <a href="https://fiddle.skia.org/c/@Surface_height">https://fiddle.skia.org/c/@Surface_height</a>
+     * @see [https://fiddle.skia.org/c/@Surface_height](https://fiddle.skia.org/c/@Surface_height)
      */
-    public int getHeight() {
-        try {
-            Stats.onNativeCall();
-            return _nGetHeight(_ptr);
+    val height: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGetHeight(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
-     * <p>Returns an ImageInfo describing the surface.</p>
+     *
+     * Returns an ImageInfo describing the surface.
      *
      * @return ImageInfo describing the surface.
      */
-    @NotNull
-    public ImageInfo getImageInfo() {
-        try {
-            Stats.onNativeCall();
-            return _nGetImageInfo(_ptr);
+    val imageInfo: ImageInfo
+        get() = try {
+            Stats.onNativeCall()
+            _nGetImageInfo(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
-     * <p>Returns unique value identifying the content of Surface.</p>
      *
-     * <p>Returned value changes each time the content changes.
-     * Content is changed by drawing, or by calling notifyContentWillChange().</p>
+     * Returns unique value identifying the content of Surface.
+     *
+     *
+     * Returned value changes each time the content changes.
+     * Content is changed by drawing, or by calling notifyContentWillChange().
      *
      * @return unique content identifier
      */
-    public int getGenerationId() {
-        try {
-            Stats.onNativeCall();
-            return _nGenerationId(_ptr);
+    val generationId: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGenerationId(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
-     * <p>Notifies that Surface contents will be changed by code outside of Skia.</p>
      *
-     * <p>Subsequent calls to generationID() return a different value.</p>
+     * Notifies that Surface contents will be changed by code outside of Skia.
      *
-     * @see <a href="https://fiddle.skia.org/c/@Surface_notifyContentWillChange">https://fiddle.skia.org/c/@Surface_notifyContentWillChange</a>
+     *
+     * Subsequent calls to generationID() return a different value.
+     *
+     * @see [https://fiddle.skia.org/c/@Surface_notifyContentWillChange](https://fiddle.skia.org/c/@Surface_notifyContentWillChange)
      */
-    public void notifyContentWillChange(ContentChangeMode mode) {
+    fun notifyContentWillChange(mode: ContentChangeMode) {
         try {
-            Stats.onNativeCall();
-            _nNotifyContentWillChange(_ptr, mode.ordinal());
+            Stats.onNativeCall()
+            _nNotifyContentWillChange(ptr, mode.ordinal)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
-     * <p>Returns the recording context being used by the Surface.</p>
+     *
+     * Returns the recording context being used by the Surface.
      *
      * @return the recording context, if available; null otherwise
      */
-    @Nullable
-    public DirectContext getRecordingContext() {
-        try {
-            Stats.onNativeCall();
-            long ptr = _nGetRecordingContext(_ptr);
-            return ptr == 0 ? null : new DirectContext(ptr);
+    val recordingContext: DirectContext?
+        get() = try {
+            Stats.onNativeCall()
+            val ptr = _nGetRecordingContext(ptr)
+            if (ptr == 0L) null else DirectContext(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
-     * <p>Returns Canvas that draws into Surface.</p>
      *
-     * <p>Subsequent calls return the same Canvas.
-     * Canvas returned is managed and owned by Surface, and is deleted when Surface is deleted.</p>
+     * Returns Canvas that draws into Surface.
+     *
+     *
+     * Subsequent calls return the same Canvas.
+     * Canvas returned is managed and owned by Surface, and is deleted when Surface is deleted.
      *
      * @return Canvas for Surface
      */
-    @NotNull
-    public Canvas getCanvas() {
-        try {
-            Stats.onNativeCall();
-            long ptr = _nGetCanvas(_ptr);
-            return ptr == 0 ? null : new Canvas(ptr, false, this);
+    val canvas: Canvas?
+        get() = try {
+            Stats.onNativeCall()
+            val ptr = _nGetCanvas(ptr)
+            if (ptr == 0L) null else Canvas(ptr, false, this)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
-     * <p>Returns a compatible Surface, or null.</p>
      *
-     * <p>Returned Surface contains the same raster, GPU, or null properties as the original.
-     * Returned Surface does not share the same pixels.</p>
+     * Returns a compatible Surface, or null.
      *
-     * <p>Returns null if imageInfo width or height are zero, or if imageInfo is incompatible with Surface.</p>
+     *
+     * Returned Surface contains the same raster, GPU, or null properties as the original.
+     * Returned Surface does not share the same pixels.
+     *
+     *
+     * Returns null if imageInfo width or height are zero, or if imageInfo is incompatible with Surface.
      *
      * @param imageInfo contains width, height, AlphaType, ColorType, ColorSpace
      * @return compatible SkSurface or null
-     * @see <a href="https://fiddle.skia.org/c/@Surface_makeSurface">https://fiddle.skia.org/c/@Surface_makeSurface</a>
+     * @see [https://fiddle.skia.org/c/@Surface_makeSurface](https://fiddle.skia.org/c/@Surface_makeSurface)
      */
-    @Nullable
-    public Surface makeSurface(ImageInfo imageInfo) {
-        try {
-            Stats.onNativeCall();
-            long ptr = _nMakeSurfaceI(_ptr,
-                    imageInfo._width,
-                    imageInfo._height,
-                    imageInfo._colorInfo._colorType.ordinal(),
-                    imageInfo._colorInfo._alphaType.ordinal(),
-                    Native.getPtr(imageInfo._colorInfo._colorSpace));
-            return new Surface(ptr);
+    fun makeSurface(imageInfo: ImageInfo): Surface? {
+        return try {
+            Stats.onNativeCall()
+            val ptr = _nMakeSurfaceI(
+                ptr,
+                imageInfo._width,
+                imageInfo._height,
+                imageInfo.colorInfo.colorType.ordinal,
+                imageInfo.colorInfo.alphaType.ordinal,
+                getPtr(imageInfo.colorInfo.colorSpace)
+            )
+            Surface(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
-     * <p>Calls makeSurface(ImageInfo) with the same ImageInfo as this surface,
-     * but with the specified width and height.</p>
      *
-     * <p>Returned Surface contains the same raster, GPU, or null properties as the original.
-     * Returned Surface does not share the same pixels.</p>
+     * Calls makeSurface(ImageInfo) with the same ImageInfo as this surface,
+     * but with the specified width and height.
      *
-     * <p>Returns null if imageInfo width or height are zero, or if imageInfo is incompatible with Surface.</p>
+     *
+     * Returned Surface contains the same raster, GPU, or null properties as the original.
+     * Returned Surface does not share the same pixels.
+     *
+     *
+     * Returns null if imageInfo width or height are zero, or if imageInfo is incompatible with Surface.
      *
      * @param width  pixel column count; must be greater than zero
      * @param height pixel row count; must be greater than zero
      * @return compatible SkSurface or null
      */
-    @Nullable
-    public Surface makeSurface(int width, int height) {
-        try {
-            Stats.onNativeCall();
-            long ptr = _nMakeSurface(_ptr, width, height);
-            return new Surface(ptr);
+    fun makeSurface(width: Int, height: Int): Surface? {
+        return try {
+            Stats.onNativeCall()
+            val ptr = _nMakeSurface(ptr, width, height)
+            Surface(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
-     * <p>Returns Image capturing Surface contents.</p>
      *
-     * <p>Subsequent drawing to Surface contents are not captured.
-     * Image allocation is accounted for if Surface was created with SkBudgeted::kYes.</p>
+     * Returns Image capturing Surface contents.
+     *
+     *
+     * Subsequent drawing to Surface contents are not captured.
+     * Image allocation is accounted for if Surface was created with SkBudgeted::kYes.
      *
      * @return Image initialized with Surface contents
-     * @see <a href="https://fiddle.skia.org/c/@Surface_makeImageSnapshot">https://fiddle.skia.org/c/@Surface_makeImageSnapshot</a>
+     * @see [https://fiddle.skia.org/c/@Surface_makeImageSnapshot](https://fiddle.skia.org/c/@Surface_makeImageSnapshot)
      */
-    public Image makeImageSnapshot() {
-        try {
-            Stats.onNativeCall();
-            return new Image(_nMakeImageSnapshot(_ptr));
+    fun makeImageSnapshot(): Image {
+        return try {
+            Stats.onNativeCall()
+            Image(_nMakeImageSnapshot(ptr))
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
-     * <p>Like the no-parameter version, this returns an image of the current surface contents.</p>
      *
-     * <p>This variant takes a rectangle specifying the subset of the surface that is of interest.
-     * These bounds will be sanitized before being used.</p>
+     * Like the no-parameter version, this returns an image of the current surface contents.
      *
-     * <ul>
-     *  <li>If bounds extends beyond the surface, it will be trimmed to just the intersection of it and the surface.</li>
-     *  <li>If bounds does not intersect the surface, then this returns null.</li>
-     *  <li>If bounds == the surface, then this is the same as calling the no-parameter variant.</li>
-     * </ul>
+     *
+     * This variant takes a rectangle specifying the subset of the surface that is of interest.
+     * These bounds will be sanitized before being used.
+     *
+     *
+     *  * If bounds extends beyond the surface, it will be trimmed to just the intersection of it and the surface.
+     *  * If bounds does not intersect the surface, then this returns null.
+     *  * If bounds == the surface, then this is the same as calling the no-parameter variant.
+     *
      *
      * @return Image initialized with Surface contents or null
-     * @see <a href="https://fiddle.skia.org/c/@Surface_makeImageSnapshot_2">https://fiddle.skia.org/c/@Surface_makeImageSnapshot_2</a>
+     * @see [https://fiddle.skia.org/c/@Surface_makeImageSnapshot_2](https://fiddle.skia.org/c/@Surface_makeImageSnapshot_2)
      */
-    @Nullable
-    public Image makeImageSnapshot(IRect area) {
-        try {
-            Stats.onNativeCall();
-            return new Image(_nMakeImageSnapshotR(_ptr, area._left, area._top, area._right, area._bottom));
+    fun makeImageSnapshot(area: IRect): Image? {
+        return try {
+            Stats.onNativeCall()
+            Image(
+                _nMakeImageSnapshotR(
+                    ptr,
+                    area._left,
+                    area._top,
+                    area._right,
+                    area._bottom
+                )
+            )
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
-     * <p>Draws Surface contents to canvas, with its top-left corner at (x, y).</p>
      *
-     * <p>If Paint paint is not null, apply ColorFilter, alpha, ImageFilter, and BlendMode.</p>
+     * Draws Surface contents to canvas, with its top-left corner at (x, y).
+     *
+     *
+     * If Paint paint is not null, apply ColorFilter, alpha, ImageFilter, and BlendMode.
      *
      * @param canvas Canvas drawn into
      * @param x      horizontal offset in Canvas
      * @param y      vertical offset in Canvas
      * @param paint  Paint containing BlendMode, ColorFilter, ImageFilter, and so on; or null
-     * @see <a href="https://fiddle.skia.org/c/@Surface_draw">https://fiddle.skia.org/c/@Surface_draw</a>
+     * @see [https://fiddle.skia.org/c/@Surface_draw](https://fiddle.skia.org/c/@Surface_draw)
      */
-    public void draw(Canvas canvas, int x, int y, Paint paint) {
+    fun draw(canvas: Canvas?, x: Int, y: Int, paint: Paint?) {
         try {
-            Stats.onNativeCall();
-            _nDraw(_ptr, Native.getPtr(canvas), x, y, Native.getPtr(paint));
+            Stats.onNativeCall()
+            _nDraw(ptr, getPtr(canvas), x.toFloat(), y.toFloat(), getPtr(paint))
         } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(canvas);
-            Reference.reachabilityFence(paint);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(canvas)
+            Reference.reachabilityFence(paint)
         }
     }
 
     /**
-     * <p>Copies Rect of pixels from Surface into bitmap.</p>
      *
-     * <p>Source Rect corners are (srcX, srcY) and Surface (width(), height()).
+     * Copies Rect of pixels from Surface into bitmap.
+     *
+     *
+     * Source Rect corners are (srcX, srcY) and Surface (width(), height()).
      * Destination Rect corners are (0, 0) and (bitmap.width(), bitmap.height()).
      * Copies each readable pixel intersecting both rectangles, without scaling,
-     * converting to bitmap.colorType() and bitmap.alphaType() if required.</p>
+     * converting to bitmap.colorType() and bitmap.alphaType() if required.
      *
-     * <p>Pixels are readable when Surface is raster, or backed by a GPU.</p>
      *
-     * <p>The destination pixel storage must be allocated by the caller.</p>
+     * Pixels are readable when Surface is raster, or backed by a GPU.
      *
-     * <p>Pixel values are converted only if ColorType and AlphaType do not match.
+     *
+     * The destination pixel storage must be allocated by the caller.
+     *
+     *
+     * Pixel values are converted only if ColorType and AlphaType do not match.
      * Only pixels within both source and destination rectangles are copied.
-     * dst contents outside Rect intersection are unchanged.</p>
+     * dst contents outside Rect intersection are unchanged.
      *
-     * <p>Pass negative values for srcX or srcY to offset pixels across or down destination.</p>
      *
-     * <p>Does not copy, and returns false if:</p>
-     * 
-     * <ul>
-     *  <li>Source and destination rectangles do not intersect.</li>
-     *  <li>Surface pixels could not be converted to dst.colorType() or dst.alphaType().</li>
-     *  <li>dst pixels could not be allocated.</li>
-     *  <li>dst.rowBytes() is too small to contain one row of pixels.</li>
-     * </ul>
+     * Pass negative values for srcX or srcY to offset pixels across or down destination.
+     *
+     *
+     * Does not copy, and returns false if:
+     *
+     *
+     *  * Source and destination rectangles do not intersect.
+     *  * Surface pixels could not be converted to dst.colorType() or dst.alphaType().
+     *  * dst pixels could not be allocated.
+     *  * dst.rowBytes() is too small to contain one row of pixels.
+     *
      *
      * @param bitmap  storage for pixels copied from SkSurface
      * @param srcX    offset into readable pixels on x-axis; may be negative
      * @param srcY    offset into readable pixels on y-axis; may be negative
      * @return        true if pixels were copied
-     * @see <a href="https://fiddle.skia.org/c/@Surface_readPixels_3">https://fiddle.skia.org/c/@Surface_readPixels_3</a>
+     * @see [https://fiddle.skia.org/c/@Surface_readPixels_3](https://fiddle.skia.org/c/@Surface_readPixels_3)
      */
-    public boolean readPixels(Bitmap bitmap, int srcX, int srcY) {
-        try {
-            Stats.onNativeCall();
-            return _nReadPixels(_ptr, Native.getPtr(bitmap), srcX, srcY);
+    fun readPixels(bitmap: Bitmap?, srcX: Int, srcY: Int): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nReadPixels(
+                ptr,
+                getPtr(bitmap),
+                srcX,
+                srcY
+            )
         } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(bitmap);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(bitmap)
         }
     }
 
     /**
-     * <p>Copies Rect of pixels from the src Bitmap to the Surface.</p>
      *
-     * <p>Source Rect corners are (0, 0) and (src.width(), src.height()).
-     * Destination Rect corners are (dstX, dstY) and (dstX + Surface width(), dstY + Surface height()).</p>
+     * Copies Rect of pixels from the src Bitmap to the Surface.
      *
-     * <p>Copies each readable pixel intersecting both rectangles, without scaling,
-     * converting to Surface colorType() and Surface alphaType() if required.</p>
+     *
+     * Source Rect corners are (0, 0) and (src.width(), src.height()).
+     * Destination Rect corners are (dstX, dstY) and (dstX + Surface width(), dstY + Surface height()).
+     *
+     *
+     * Copies each readable pixel intersecting both rectangles, without scaling,
+     * converting to Surface colorType() and Surface alphaType() if required.
      *
      * @param bitmap storage for pixels to copy to Surface
      * @param x      x-axis position relative to Surface to begin copy; may be negative
      * @param y      y-axis position relative to Surface to begin copy; may be negative
-     * @see <a href="https://fiddle.skia.org/c/@Surface_writePixels_2">https://fiddle.skia.org/c/@Surface_writePixels_2</a>
+     * @see [https://fiddle.skia.org/c/@Surface_writePixels_2](https://fiddle.skia.org/c/@Surface_writePixels_2)
      */
-    public void writePixels(Bitmap bitmap, int x, int y) {
+    fun writePixels(bitmap: Bitmap?, x: Int, y: Int) {
         try {
-            Stats.onNativeCall();
-            _nWritePixels(_ptr, Native.getPtr(bitmap), x, y);
+            Stats.onNativeCall()
+            _nWritePixels(ptr, getPtr(bitmap), x, y)
         } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(bitmap);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(bitmap)
         }
     }
 
     /**
-     * <p>Call to ensure all reads/writes of the surface have been issued to the underlying 3D API.</p>
      *
-     * <p>Skia will correctly order its own draws and pixel operations.
+     * Call to ensure all reads/writes of the surface have been issued to the underlying 3D API.
+     *
+     *
+     * Skia will correctly order its own draws and pixel operations.
      * This must to be used to ensure correct ordering when the surface backing store is accessed
      * outside Skia (e.g. direct use of the 3D API or a windowing system).
      * DirectContext has additional flush and submit methods that apply to all surfaces and images created from
      * a DirectContext.
      */
-    public void flushAndSubmit() {
+    fun flushAndSubmit() {
         try {
-            Stats.onNativeCall();
-            _nFlushAndSubmit(_ptr, false);
+            Stats.onNativeCall()
+            _nFlushAndSubmit(ptr, false)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
-     * <p>Call to ensure all reads/writes of the surface have been issued to the underlying 3D API.</p>
      *
-     * <p>Skia will correctly order its own draws and pixel operations.
+     * Call to ensure all reads/writes of the surface have been issued to the underlying 3D API.
+     *
+     *
+     * Skia will correctly order its own draws and pixel operations.
      * This must to be used to ensure correct ordering when the surface backing store is accessed
      * outside Skia (e.g. direct use of the 3D API or a windowing system).
      * DirectContext has additional flush and submit methods that apply to all surfaces and images created from
@@ -781,81 +1017,51 @@ public class Surface extends RefCnt {
      *
      * @param syncCpu a flag determining if cpu should be synced
      */
-    public void flushAndSubmit(boolean syncCpu) {
+    fun flushAndSubmit(syncCpu: Boolean) {
         try {
-            Stats.onNativeCall();
-            _nFlushAndSubmit(_ptr, syncCpu);
+            Stats.onNativeCall()
+            _nFlushAndSubmit(ptr, syncCpu)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
-    public void flush() {
+    fun flush() {
         try {
-            Stats.onNativeCall();
-            _nFlush(_ptr);
+            Stats.onNativeCall()
+            _nFlush(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
-     * <p>May return true if the caller is the only owner.</p>
      *
-     * <p>Ensures that all previous owner's actions are complete.</p>
+     * May return true if the caller is the only owner.
+     *
+     *
+     * Ensures that all previous owner's actions are complete.
      */
-    public boolean isUnique() {
-        try {
-            Stats.onNativeCall();
-            return _nUnique(_ptr);
+    val isUnique: Boolean
+        get() = try {
+            Stats.onNativeCall()
+            _nUnique(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
+
+    internal constructor(ptr: Long) : super(ptr) {
+        _context = null
+        _renderTarget = null
     }
 
-    @ApiStatus.Internal
-    public Surface(long ptr) {
-        super(ptr);
-        _context = null;
-        _renderTarget = null;
+    internal constructor(ptr: Long, context: DirectContext?) : super(ptr) {
+        _context = context
+        _renderTarget = null
     }
 
-    @ApiStatus.Internal
-    public Surface(long ptr, DirectContext context) {
-        super(ptr);
-        _context = context;
-        _renderTarget = null;
+    internal constructor(ptr: Long, context: DirectContext?, renderTarget: BackendRenderTarget?) : super(ptr) {
+        _context = context
+        _renderTarget = renderTarget
     }
-
-    @ApiStatus.Internal
-    public Surface(long ptr, DirectContext context, BackendRenderTarget renderTarget) {
-        super(ptr);
-        _context = context;
-        _renderTarget = renderTarget;
-    }
-
-    public static native long _nMakeRasterDirect(int width, int height, int colorType, int alphaType, long colorSpacePtr, long pixelsPtr, long rowBytes, SurfaceProps surfaceProps);
-    public static native long _nMakeRaster(int width, int height, int colorType, int alphaType, long colorSpacePtr, long rowBytes, SurfaceProps surfaceProps);
-    public static native long _nMakeRasterN32Premul(int width, int height);
-    public static native long _nMakeFromBackendRenderTarget(long pContext, long pBackendRenderTarget, int surfaceOrigin, int colorType, long colorSpacePtr, SurfaceProps surfaceProps);
-    public static native long _nMakeFromMTKView(long contextPtr, long mtkViewPtr, int surfaceOrigin, int sampleCount, int colorType, long colorSpacePtr, SurfaceProps surfaceProps);
-    public static native long _nMakeRenderTarget(long contextPtr, boolean budgeted, int width, int height, int colorType, int alphaType, long colorSpacePtr, int sampleCount, int surfaceOrigin, SurfaceProps surfaceProps, boolean shouldCreateWithMips);
-    public static native long _nMakeNull(int width, int height);
-    public static native int _nGetWidth(long ptr);
-    public static native int _nGetHeight(long ptr);
-    public static native ImageInfo _nGetImageInfo(long ptr);
-    public static native int _nGenerationId(long ptr);
-    public static native void _nNotifyContentWillChange(long ptr, int mode);
-    public static native long _nGetRecordingContext(long ptr);
-    public static native long _nGetCanvas(long ptr);
-    public static native long _nMakeSurfaceI(long ptr, int width, int height, int colorType, int alphaType, long colorSpacePtr);
-    public static native long _nMakeSurface(long ptr, int width, int height);
-    public static native long _nMakeImageSnapshot(long ptr);
-    public static native long _nMakeImageSnapshotR(long ptr, int left, int top, int right, int bottom);
-    public static native void _nDraw(long ptr, long canvasPtr, float x, float y, long paintPtr);
-    public static native boolean _nReadPixels(long ptr, long bitmapPtr, int srcX, int srcY);
-    public static native void _nWritePixels(long ptr, long bitmapPtr, int x, int y);
-    public static native void _nFlushAndSubmit(long ptr, boolean syncCpu);
-    public static native void _nFlush(long ptr);
-    public static native boolean _nUnique(long ptr);
 }

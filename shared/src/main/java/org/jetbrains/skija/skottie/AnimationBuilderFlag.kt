@@ -1,8 +1,6 @@
-package org.jetbrains.skija.skottie;
+package org.jetbrains.skija.skottie
 
-import org.jetbrains.annotations.*;
-
-public enum AnimationBuilderFlag {
+enum class AnimationBuilderFlag(internal val _flag: Int) {
     /**
      * Normally, all static image frames are resolved at
      * load time via ImageAsset::getFrame(0).  With this flag,
@@ -15,10 +13,4 @@ public enum AnimationBuilderFlag {
      * normally used as fallback) over native Skia typefaces.
      */
     PREFER_EMBEDDED_FONTS(0x02);
-
-    @ApiStatus.Internal public final int _flag;
-
-    AnimationBuilderFlag(int flag) {
-        this._flag = flag;
-    }
 }

@@ -26,7 +26,7 @@ abstract class Native(
         }
     }
 
-    internal open fun _nativeEquals(other: Native?): Boolean {
+    internal open fun _nativeEquals(other: Native): Boolean {
         return false
     }
 

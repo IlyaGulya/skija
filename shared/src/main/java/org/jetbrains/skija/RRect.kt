@@ -1,104 +1,139 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import java.util.*;
-import lombok.*;
-import org.jetbrains.annotations.*;
+import lombok.EqualsAndHashCode
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 @EqualsAndHashCode(callSuper = true)
-public class RRect extends Rect {
-    public final float[] _radii;
-
-    @ApiStatus.Internal
-    public RRect(float l, float t, float r, float b, float[] radii) {
-        super(l, t, r, b);
-        this._radii = radii;
-    }
-
-    public static RRect makeLTRB(float l, float t, float r, float b, float radius) {
-        return new RRect(l, t, r, b, new float[] { radius } );
-    }
-
-    public static RRect makeLTRB(float l, float t, float r, float b, float xRad, float yRad) {
-        return new RRect(l, t, r, b, new float[] { xRad, yRad } );
-    }
-
-    public static RRect makeLTRB(float l, float t, float r, float b, float tlRad, float trRad, float brRad, float blRad) {
-        return new RRect(l, t, r, b, new float[] { tlRad, trRad, brRad, blRad });
-    }
-
-    public static RRect makeNinePatchLTRB(float l, float t, float r, float b, float lRad, float tRad, float rRad, float bRad) {
-        return new RRect(l, t, r, b, new float[] { lRad, tRad, rRad, tRad, rRad, bRad, lRad, bRad });
-    }
-
-    public static RRect makeComplexLTRB(float l, float t, float r, float b, float[] radii) {
-        return new RRect(l, t, r, b, radii);
-    }
-
-    public static RRect makeOvalLTRB(float l, float t, float r, float b) {
-        return new RRect(l, t, r, b, new float[] { Math.abs(r - l) / 2f, Math.abs(b - t) / 2f } );
-    }
-
-    public static RRect makePillLTRB(float l, float t, float r, float b) {
-        return new RRect(l, t, r, b, new float[] { Math.min(Math.abs(r - l), Math.abs(t - b)) / 2f } );
-    }
-
-    public static RRect makeXYWH(float l, float t, float w, float h, float radius) {
-        return new RRect(l, t, l + w, t + h, new float[] { radius } );
-    }
-
-    public static RRect makeXYWH(float l, float t, float w, float h, float xRad, float yRad) {
-        return new RRect(l, t, l + w, t + h, new float[] { xRad, yRad } );
-    }
-
-    public static RRect makeXYWH(float l, float t, float w, float h, float tlRad, float trRad, float brRad, float blRad) {
-        return new RRect(l, t, l + w, t + h, new float[] { tlRad, trRad, brRad, blRad });
-    }
-
-    public static RRect makeNinePatchXYWH(float l, float t, float w, float h, float lRad, float tRad, float rRad, float bRad) {
-        return new RRect(l, t, l + w, t + h, new float[] { lRad, tRad, rRad, tRad, rRad, bRad, lRad, bRad });
-    }
-
-    public static RRect makeComplexXYWH(float l, float t, float w, float h, float[] radii) {
-        return new RRect(l, t, l + w, t + h, radii);
-    }
-
-    public static RRect makeOvalXYWH(float l, float t, float w, float h) {
-        return new RRect(l, t, l + w, t + h, new float[] { w / 2f, h / 2f } );
-    }
-
-    public static RRect makePillXYWH(float l, float t, float w, float h) {
-        return new RRect(l, t, l + w, t + h, new float[] { Math.min(w, h) / 2f } );
-    }
-
-    @Override @NotNull
-    public Rect inflate(float spread) {
-        boolean becomesRect = true;
-        for (int i = 0; i < _radii.length; ++i) {
-            if (_radii[i] + spread >= 0) {
-                becomesRect = false;
-                break;
+class RRect internal constructor(
+    l: Float,
+    t: Float,
+    r: Float,
+    b: Float,
+    val radii: FloatArray
+) : Rect(l, t, r, b) {
+    override fun inflate(spread: Float): Rect {
+        var becomesRect = true
+        for (i in radii.indices) {
+            if (radii[i] + spread >= 0) {
+                becomesRect = false
+                break
             }
         }
-
-        if (becomesRect)
-            return Rect.makeLTRB(_left - spread,
-                                 _top - spread,
-                                 Math.max(_left - spread, _right + spread),
-                                 Math.max(_top - spread, _bottom + spread));
-        else {
-            float[] radii = Arrays.copyOf(_radii, _radii.length);
-            for (int i = 0; i < radii.length; ++i)
-                radii[i] = Math.max(0f, radii[i] + spread);
-            return new RRect(_left - spread,
-                             _top - spread,
-                             Math.max(_left - spread, _right + spread),
-                             Math.max(_top - spread, _bottom + spread),
-                             radii);
+        return if (becomesRect) makeLTRB(
+            left - spread,
+            top - spread,
+            max(left - spread, right + spread),
+            max(top - spread, bottom + spread)
+        ) else {
+            val radii = radii.copyOf(radii.size)
+            for (i in radii.indices) radii[i] = max(0f, radii[i] + spread)
+            RRect(
+                left - spread,
+                top - spread,
+                max(left - spread, right + spread),
+                max(top - spread, bottom + spread),
+                radii
+            )
         }
     }
 
-    @Override
-    public String toString() {
-        return "RRect(_left=" + _left + ", _top=" + _top + ", _right=" + _right + ", _bottom=" + _bottom + ", _radii=" + Arrays.toString(_radii) + ")";
+    override fun toString(): String {
+        return "RRect(_left=$left, _top=$top, _right=$right, _bottom=$bottom, _radii=${radii.contentToString()})"
+    }
+
+    companion object {
+        fun makeLTRB(l: Float, t: Float, r: Float, b: Float, radius: Float): RRect {
+            return RRect(l, t, r, b, floatArrayOf(radius))
+        }
+
+        fun makeLTRB(l: Float, t: Float, r: Float, b: Float, xRad: Float, yRad: Float): RRect {
+            return RRect(l, t, r, b, floatArrayOf(xRad, yRad))
+        }
+
+        fun makeLTRB(
+            l: Float,
+            t: Float,
+            r: Float,
+            b: Float,
+            tlRad: Float,
+            trRad: Float,
+            brRad: Float,
+            blRad: Float
+        ): RRect {
+            return RRect(l, t, r, b, floatArrayOf(tlRad, trRad, brRad, blRad))
+        }
+
+        fun makeNinePatchLTRB(
+            l: Float,
+            t: Float,
+            r: Float,
+            b: Float,
+            lRad: Float,
+            tRad: Float,
+            rRad: Float,
+            bRad: Float
+        ): RRect {
+            return RRect(l, t, r, b, floatArrayOf(lRad, tRad, rRad, tRad, rRad, bRad, lRad, bRad))
+        }
+
+        fun makeComplexLTRB(l: Float, t: Float, r: Float, b: Float, radii: FloatArray): RRect {
+            return RRect(l, t, r, b, radii)
+        }
+
+        fun makeOvalLTRB(l: Float, t: Float, r: Float, b: Float): RRect {
+            return RRect(l, t, r, b, floatArrayOf(abs(r - l) / 2f, abs(b - t) / 2f))
+        }
+
+        fun makePillLTRB(l: Float, t: Float, r: Float, b: Float): RRect {
+            return RRect(l, t, r, b, floatArrayOf(min(abs(r - l), abs(t - b)) / 2f))
+        }
+
+        fun makeXYWH(l: Float, t: Float, w: Float, h: Float, radius: Float): RRect {
+            return RRect(l, t, l + w, t + h, floatArrayOf(radius))
+        }
+
+        fun makeXYWH(l: Float, t: Float, w: Float, h: Float, xRad: Float, yRad: Float): RRect {
+            return RRect(l, t, l + w, t + h, floatArrayOf(xRad, yRad))
+        }
+
+        fun makeXYWH(
+            l: Float,
+            t: Float,
+            w: Float,
+            h: Float,
+            tlRad: Float,
+            trRad: Float,
+            brRad: Float,
+            blRad: Float
+        ): RRect {
+            return RRect(l, t, l + w, t + h, floatArrayOf(tlRad, trRad, brRad, blRad))
+        }
+
+        fun makeNinePatchXYWH(
+            l: Float,
+            t: Float,
+            w: Float,
+            h: Float,
+            lRad: Float,
+            tRad: Float,
+            rRad: Float,
+            bRad: Float
+        ): RRect {
+            return RRect(l, t, l + w, t + h, floatArrayOf(lRad, tRad, rRad, tRad, rRad, bRad, lRad, bRad))
+        }
+
+        fun makeComplexXYWH(l: Float, t: Float, w: Float, h: Float, radii: FloatArray): RRect {
+            return RRect(l, t, l + w, t + h, radii)
+        }
+
+        fun makeOvalXYWH(l: Float, t: Float, w: Float, h: Float): RRect {
+            return RRect(l, t, l + w, t + h, floatArrayOf(w / 2f, h / 2f))
+        }
+
+        fun makePillXYWH(l: Float, t: Float, w: Float, h: Float): RRect {
+            return RRect(l, t, l + w, t + h, floatArrayOf(min(w, h) / 2f))
+        }
     }
 }

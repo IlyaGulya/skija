@@ -1,9 +1,9 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
 /**
  * Whether edge pixels draw opaque or with partial transparency.
  */
-public enum FontEdging {
+enum class FontEdging {
     /**
      * no transparent pixels on glyph edges
      */

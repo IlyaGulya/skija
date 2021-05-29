@@ -1,118 +1,110 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
-import org.jetbrains.annotations.*;
+import lombok.EqualsAndHashCode
+import lombok.Getter
+import lombok.ToString
+import org.jetbrains.annotations.ApiStatus.Internal
+import org.jetbrains.annotations.Contract
+import kotlin.math.max
+import kotlin.math.min
 
 @Getter
 @EqualsAndHashCode
 @ToString
-public class Rect {
-    public final float _left;
-    public final float _top;
-    public final float _right;
-    public final float _bottom;
+open class Rect @Internal constructor(
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float,
+) {
+    val width: Float
+        get() = right - left
+    val height: Float
+        get() = bottom - top
 
-    @ApiStatus.Internal
-    public Rect(float l, float t, float r, float b) {
-        this._left = l;
-        this._top = t;
-        this._right = r;
-        this._bottom = b;
+    fun intersect(other: Rect?): Rect? {
+        requireNotNull(other) { "Rect::intersect expected other != null" }
+
+        if (right <= other.left
+            || other.right <= left
+            || bottom <= other.top
+            || other.bottom <= top
+        ) return null
+
+        return Rect(
+            max(left, other.left),
+            max(top, other.top),
+            min(right, other.right),
+            min(bottom, other.bottom)
+        )
     }
 
-    public float getWidth() {
-        return _right - _left;
+    fun scale(scale: Float): Rect {
+        return scale(scale, scale)
     }
 
-    public float getHeight() {
-        return _bottom - _top;
+    fun scale(sx: Float, sy: Float): Rect {
+        return Rect(left * sx, top * sy, right * sx, bottom * sy)
     }
 
-    @NotNull @Contract("_, _, _, _ -> new")
-    public static Rect makeLTRB(float l, float t, float r, float b) {
-        if (l > r)
-            throw new IllegalArgumentException("Rect::makeLTRB expected l <= r, got " + l + " > " + r);
-        if (t > b)
-            throw new IllegalArgumentException("Rect::makeLTRB expected t <= b, got " + t + " > " + b);
-        return new Rect(l, t, r, b);
+    fun offset(dx: Float, dy: Float): Rect {
+        return Rect(left + dx, top + dy, right + dx, bottom + dy)
     }
 
-    @NotNull @Contract("_, _ -> new")
-    public static Rect makeWH(float w, float h) {
-        if (w < 0)
-            throw new IllegalArgumentException("Rect::makeWH expected w >= 0, got: " + w);
-        if (h < 0)
-            throw new IllegalArgumentException("Rect::makeWH expected h >= 0, got: " + h);
-        return new Rect(0, 0, w, h);
+    fun offset(vec: Point?): Rect {
+        requireNotNull(vec) { "Rect::offset expected vec != null" }
+        return offset(vec._x, vec._y)
     }
 
-    @NotNull @Contract("_, _ -> new")
-    public static Rect makeWH(@NotNull Point size) {
-        assert size != null : "Rect::makeWH expected size != null";
-        return makeWH(size._x, size._y);
+    @Contract("-> new")
+    fun toIRect(): IRect {
+        return IRect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt())
     }
 
-    @NotNull @Contract("_, _, _, _ -> new")
-    public static Rect makeXYWH(float l, float t, float w, float h) {
-        if (w < 0)
-            throw new IllegalArgumentException("Rect::makeXYWH expected w >= 0, got: " + w);
-        if (h < 0)
-            throw new IllegalArgumentException("Rect::makeXYWH expected h >= 0, got: " + h);
-        return new Rect(l, t, l + w, t + h);
+    open fun inflate(spread: Float): Rect {
+        return if (spread <= 0) makeLTRB(
+            left - spread,
+            top - spread,
+            max(left - spread, right + spread),
+            max(top - spread, bottom + spread)
+        ) else RRect.Companion.makeLTRB(
+            left - spread,
+            top - spread,
+            max(left - spread, right + spread),
+            max(top - spread, bottom + spread),
+            spread
+        )
     }
 
-    @Nullable
-    public Rect intersect(@NotNull Rect other) {
-        assert other != null : "Rect::intersect expected other != null";
-        if (_right <= other._left || other._right <= _left || _bottom <= other._top || other._bottom <= _top)
-            return null;
-        return new Rect(Math.max(_left, other._left), Math.max(_top, other._top), Math.min(_right, other._right), Math.min(_bottom, other._bottom));
-    }
+    val isEmpty: Boolean
+        get() = right == left || top == bottom
 
-    @NotNull
-    public Rect scale(float scale) {
-        return scale(scale, scale);
-    }
+    companion object {
+        @Contract("_, _, _, _ -> new")
+        fun makeLTRB(l: Float, t: Float, r: Float, b: Float): Rect {
+            require(l <= r) { "Rect::makeLTRB expected l <= r, got $l > $r" }
+            require(t <= b) { "Rect::makeLTRB expected t <= b, got $t > $b" }
+            return Rect(l, t, r, b)
+        }
 
-    @NotNull
-    public Rect scale(float sx, float sy) {
-        return new Rect(_left * sx, _top * sy, _right * sx, _bottom * sy);
-    }
+        @Contract("_, _ -> new")
+        fun makeWH(w: Float, h: Float): Rect {
+            require(w >= 0) { "Rect::makeWH expected w >= 0, got: $w" }
+            require(h >= 0) { "Rect::makeWH expected h >= 0, got: $h" }
+            return Rect(0f, 0f, w, h)
+        }
 
-    @NotNull
-    public Rect offset(float dx, float dy) {
-        return new Rect(_left + dx, _top + dy, _right + dx, _bottom + dy);
-    }
+        @Contract("_, _ -> new")
+        fun makeWH(size: Point?): Rect {
+            requireNotNull(size) { "Rect::makeWH expected size != null" }
+            return makeWH(size._x, size._y)
+        }
 
-    @NotNull
-    public Rect offset(@NotNull Point vec) {
-        assert vec != null : "Rect::offset expected vec != null";
-        return offset(vec._x, vec._y);
-    }
-
-    @NotNull @Contract("-> new")
-    public IRect toIRect() {
-        return new IRect((int) _left, (int) _top, (int) _right, (int) _bottom);
-    }
-
-    @NotNull
-    public Rect inflate(float spread) {
-        if (spread <= 0)
-            return Rect.makeLTRB(_left - spread,
-                                 _top - spread,
-                                 Math.max(_left - spread, _right + spread),
-                                 Math.max(_top - spread, _bottom + spread));
-        else
-            return RRect.makeLTRB(_left - spread,
-                                  _top - spread,
-                                  Math.max(_left - spread, _right + spread),
-                                  Math.max(_top - spread, _bottom + spread),
-                                  spread);
-    }
-
-    public boolean isEmpty() {
-        return _right == _left || _top == _bottom;
+        @Contract("_, _, _, _ -> new")
+        fun makeXYWH(l: Float, t: Float, w: Float, h: Float): Rect {
+            require(w >= 0) { "Rect::makeXYWH expected w >= 0, got: $w" }
+            require(h >= 0) { "Rect::makeXYWH expected h >= 0, got: $h" }
+            return Rect(l, t, l + w, t + h)
+        }
     }
 }

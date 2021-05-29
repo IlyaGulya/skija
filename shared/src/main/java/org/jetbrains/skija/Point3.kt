@@ -1,10 +1,7 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import lombok.Data;
-
-@Data
-public class Point3 {
-    public final float _x;
-    public final float _y;
-    public final float _z;
-}
+data class Point3(
+    val x: Float = 0f,
+    val y: Float = 0f,
+    val z: Float = 0f,
+)

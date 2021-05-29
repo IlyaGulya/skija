@@ -9,16 +9,16 @@ abstract class Managed @JvmOverloads constructor(
     managed: Boolean = true
 ) : Native(ptr),
     AutoCloseable {
-    internal var _cleanable: Cleanable? = null
+    internal var cleanable: Cleanable? = null
     override fun close() {
         when {
             0L == ptr -> throw RuntimeException("Object already closed: $javaClass, ptr=$ptr")
-            null == _cleanable -> throw RuntimeException(
+            null == cleanable -> throw RuntimeException(
                 "Object is not managed in JVM, can't close(): $javaClass, ptr=$ptr"
             )
             else -> {
-                _cleanable!!.clean()
-                _cleanable = null
+                cleanable!!.clean()
+                cleanable = null
                 ptr = 0
             }
         }
@@ -51,7 +51,7 @@ abstract class Managed @JvmOverloads constructor(
             assert(finalizer != 0L) { "Managed finalizer is 0" }
             val className = javaClass.simpleName
             Stats.onAllocated(className)
-            _cleanable = _cleaner.register(this, CleanerThunk(className, ptr, finalizer))
+            cleanable = _cleaner.register(this, CleanerThunk(className, ptr, finalizer))
         }
     }
 }

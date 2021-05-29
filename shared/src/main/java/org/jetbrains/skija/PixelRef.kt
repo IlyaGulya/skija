@@ -1,99 +1,93 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import java.lang.ref.*;
-import lombok.*;
-import org.jetbrains.annotations.*;
-import org.jetbrains.skija.impl.*;
+import org.jetbrains.skija.impl.Library
+import org.jetbrains.skija.impl.RefCnt
+import org.jetbrains.skija.impl.Stats
+import java.lang.ref.Reference
 
-public class PixelRef extends RefCnt {
-    static { Library.staticLoad(); }
-    
-    @ApiStatus.Internal
-    public PixelRef(long ptr) {
-        super(ptr);
-    }
+class PixelRef internal constructor(
+    ptr: Long
+) : RefCnt(ptr) {
+    companion object {
+        internal external fun _nGetWidth(ptr: Long): Int
+        internal external fun _nGetHeight(ptr: Long): Int
+        internal external fun _nGetRowBytes(ptr: Long): Long
+        internal external fun _nGetGenerationId(ptr: Long): Int
+        internal external fun _nNotifyPixelsChanged(ptr: Long)
+        internal external fun _nIsImmutable(ptr: Long): Boolean
+        internal external fun _nSetImmutable(ptr: Long)
 
-    public int getWidth() {
-        try {
-            Stats.onNativeCall();
-            return _nGetWidth(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
+        init {
+            Library.staticLoad()
         }
     }
 
-    public int getHeight() {
-        try {
-            Stats.onNativeCall();
-            return _nGetHeight(_ptr);
+    val width: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGetWidth(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
-
-    public long getRowBytes() {
-        try {
-            Stats.onNativeCall();
-            return _nGetRowBytes(_ptr);
+    val height: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGetHeight(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
+    val rowBytes: Long
+        get() = try {
+            Stats.onNativeCall()
+            _nGetRowBytes(ptr)
+        } finally {
+            Reference.reachabilityFence(this)
+        }
 
-    /** 
+    /**
      * Returns a non-zero, unique value corresponding to the pixels in this
      * pixelref. Each time the pixels are changed (and notifyPixelsChanged is
      * called), a different generation ID will be returned.
      */
-    public int getGenerationId() {
-        try {
-            Stats.onNativeCall();
-            return _nGetGenerationId(_ptr);
+    val generationId: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGetGenerationId(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
      * Call this if you have changed the contents of the pixels. This will in-
      * turn cause a different generation ID value to be returned from
      * getGenerationID().
      */
-    public PixelRef notifyPixelsChanged() {
-        Stats.onNativeCall();
-        _nNotifyPixelsChanged(_ptr);
-        return this;
+    fun notifyPixelsChanged(): PixelRef {
+        Stats.onNativeCall()
+        _nNotifyPixelsChanged(ptr)
+        return this
     }
 
-    /** 
+    /**
      * Returns true if this pixelref is marked as immutable, meaning that the
      * contents of its pixels will not change for the lifetime of the pixelref.
      */
-    public boolean isImmutable() {
-        try {
-            Stats.onNativeCall();
-            return _nIsImmutable(_ptr);
+    val isImmutable: Boolean
+        get() = try {
+            Stats.onNativeCall()
+            _nIsImmutable(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
-    /** 
+    /**
      * Marks this pixelref is immutable, meaning that the contents of its
      * pixels will not change for the lifetime of the pixelref. This state can
      * be set on a pixelref, but it cannot be cleared once it is set.
      */
-    public PixelRef setImmutable() {
-        Stats.onNativeCall();
-        _nSetImmutable(_ptr);
-        return this;
+    fun setImmutable(): PixelRef {
+        Stats.onNativeCall()
+        _nSetImmutable(ptr)
+        return this
     }
-
-    @ApiStatus.Internal public static native int  _nGetWidth(long ptr);
-    @ApiStatus.Internal public static native int  _nGetHeight(long ptr);
-    @ApiStatus.Internal public static native long _nGetRowBytes(long ptr);
-    @ApiStatus.Internal public static native int  _nGetGenerationId(long ptr);
-    @ApiStatus.Internal public static native void _nNotifyPixelsChanged(long ptr);
-    @ApiStatus.Internal public static native boolean _nIsImmutable(long ptr);
-    @ApiStatus.Internal public static native void _nSetImmutable(long ptr);
 }

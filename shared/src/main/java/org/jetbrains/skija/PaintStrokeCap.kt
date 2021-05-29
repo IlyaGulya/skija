@@ -1,9 +1,9 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
 /**
  * Cap draws at the beginning and end of an open path contour.
  */
-public enum PaintStrokeCap {
+enum class PaintStrokeCap {
     /**
      * No stroke extension
      */

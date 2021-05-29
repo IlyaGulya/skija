@@ -1,9 +1,9 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
 /**
  * Level of glyph outline adjustment
  */
-public enum FontHinting {
+enum class FontHinting {
     /**
      * glyph outlines unchanged
      */

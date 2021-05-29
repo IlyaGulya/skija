@@ -240,10 +240,10 @@ class TextBlobBuilder @Internal constructor(ptr: Long) : Managed(ptr, _Finalizer
             assert(glyphs.size == xform.size) { "glyphs.length " + glyphs.size + " != xform.length " + xform.size }
             val floatXform = FloatArray(xform.size * 4)
             for (i in xform.indices) {
-                floatXform[i * 4] = xform[i]._scos
-                floatXform[i * 4 + 1] = xform[i]._ssin
-                floatXform[i * 4 + 2] = xform[i]._tx
-                floatXform[i * 4 + 3] = xform[i]._ty
+                floatXform[i * 4] = xform[i].scos
+                floatXform[i * 4 + 1] = xform[i].ssin
+                floatXform[i * 4 + 2] = xform[i].tx
+                floatXform[i * 4 + 3] = xform[i].ty
             }
             Stats.onNativeCall()
             _nAppendRunRSXform(

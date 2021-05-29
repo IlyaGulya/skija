@@ -1,255 +1,596 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import java.lang.ref.*;
-import org.jetbrains.annotations.*;
-import org.jetbrains.skija.impl.*;
+import org.jetbrains.skija.impl.Library
+import org.jetbrains.skija.impl.RefCnt
+import org.jetbrains.skija.impl.Stats
+import java.lang.ref.Reference
 
-public class Shader extends RefCnt {
-    static { Library.staticLoad(); }
-    
-    public Shader makeWithColorFilter(ColorFilter f) {
-        try {
-            return new Shader(_nMakeWithColorFilter(_ptr, Native.getPtr(f)));
-        } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(f);
+class Shader internal constructor(
+    ptr: Long
+) : RefCnt(ptr) {
+
+    companion object {
+        // Linear
+        fun makeLinearGradient(p0: Point, p1: Point, colors: IntArray): Shader {
+            return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors)
+        }
+
+        fun makeLinearGradient(p0: Point, p1: Point, colors: IntArray, positions: FloatArray?): Shader {
+            return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors, positions)
+        }
+
+        fun makeLinearGradient(
+            p0: Point,
+            p1: Point,
+            colors: IntArray,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors, positions, style)
+        }
+
+        @JvmOverloads
+        fun makeLinearGradient(
+            x0: Float,
+            y0: Float,
+            x1: Float,
+            y1: Float,
+            colors: IntArray,
+            positions: FloatArray? = null,
+            style: GradientStyle = GradientStyle.DEFAULT
+        ): Shader {
+            assert(positions == null || colors.size == positions.size) { "colors.length " + colors.size + "!= positions.length " + positions!!.size }
+            Stats.onNativeCall()
+            return Shader(
+                _nMakeLinearGradient(
+                    x0,
+                    y0,
+                    x1,
+                    y1,
+                    colors,
+                    positions,
+                    style.tileMode.ordinal,
+                    style.getFlags(),
+                    style.getMatrixArray()
+                )
+            )
+        }
+
+        fun makeLinearGradient(
+            p0: Point,
+            p1: Point,
+            colors: Array<Color4f>,
+            cs: ColorSpace?,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors, cs, positions, style)
+        }
+
+        fun makeLinearGradient(
+            x0: Float,
+            y0: Float,
+            x1: Float,
+            y1: Float,
+            colors: Array<Color4f>,
+            cs: ColorSpace?,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return try {
+                requireNotNull(positions) { "positions should not be null" }
+                require(colors.size == positions.size) { "colors.length " + colors.size + "!= positions.length " + positions.size }
+                Stats.onNativeCall()
+                Shader(
+                    _nMakeLinearGradientCS(
+                        x0,
+                        y0,
+                        x1,
+                        y1,
+                        Color4f.flattenArray(colors),
+                        getPtr(cs),
+                        positions,
+                        style.tileMode.ordinal,
+                        style.getFlags(),
+                        style.getMatrixArray()
+                    )
+                )
+            } finally {
+                Reference.reachabilityFence(cs)
+            }
+        }
+
+        // Radial
+        fun makeRadialGradient(center: Point, r: Float, colors: IntArray): Shader {
+            return makeRadialGradient(center._x, center._y, r, colors)
+        }
+
+        fun makeRadialGradient(center: Point, r: Float, colors: IntArray, positions: FloatArray?): Shader {
+            return makeRadialGradient(center._x, center._y, r, colors, positions)
+        }
+
+        fun makeRadialGradient(
+            center: Point,
+            r: Float,
+            colors: IntArray,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return makeRadialGradient(center._x, center._y, r, colors, positions, style)
+        }
+
+        @JvmOverloads
+        fun makeRadialGradient(
+            x: Float,
+            y: Float,
+            r: Float,
+            colors: IntArray,
+            positions: FloatArray? = null,
+            style: GradientStyle = GradientStyle.DEFAULT
+        ): Shader {
+            requireNotNull(positions) { "positions should not be null" }
+            require(colors.size == positions.size) { "colors.length " + colors.size + "!= positions.length " + positions.size }
+            Stats.onNativeCall()
+            return Shader(
+                _nMakeRadialGradient(
+                    x,
+                    y,
+                    r,
+                    colors,
+                    positions,
+                    style.tileMode.ordinal,
+                    style.getFlags(),
+                    style.getMatrixArray()
+                )
+            )
+        }
+
+        fun makeRadialGradient(
+            center: Point,
+            r: Float,
+            colors: Array<Color4f>,
+            cs: ColorSpace?,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return makeRadialGradient(center._x, center._y, r, colors, cs, positions, style)
+        }
+
+        fun makeRadialGradient(
+            x: Float,
+            y: Float,
+            r: Float,
+            colors: Array<Color4f>,
+            cs: ColorSpace?,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return try {
+                requireNotNull(positions) { "positions should not be null" }
+                require(colors.size == positions.size) { "colors.length " + colors.size + "!= positions.length " + positions.size }
+                Stats.onNativeCall()
+                Shader(
+                    _nMakeRadialGradientCS(
+                        x,
+                        y,
+                        r,
+                        Color4f.flattenArray(colors),
+                        getPtr(cs),
+                        positions,
+                        style.tileMode.ordinal,
+                        style.getFlags(),
+                        style.getMatrixArray()
+                    )
+                )
+            } finally {
+                Reference.reachabilityFence(cs)
+            }
+        }
+
+        // Two-point Conical
+        fun makeTwoPointConicalGradient(p0: Point, r0: Float, p1: Point, r1: Float, colors: IntArray): Shader {
+            return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors)
+        }
+
+        fun makeTwoPointConicalGradient(
+            p0: Point,
+            r0: Float,
+            p1: Point,
+            r1: Float,
+            colors: IntArray,
+            positions: FloatArray?
+        ): Shader {
+            return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors, positions)
+        }
+
+        fun makeTwoPointConicalGradient(
+            p0: Point,
+            r0: Float,
+            p1: Point,
+            r1: Float,
+            colors: IntArray,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors, positions, style)
+        }
+
+        @JvmOverloads
+        fun makeTwoPointConicalGradient(
+            x0: Float,
+            y0: Float,
+            r0: Float,
+            x1: Float,
+            y1: Float,
+            r1: Float,
+            colors: IntArray,
+            positions: FloatArray? = null,
+            style: GradientStyle = GradientStyle.DEFAULT
+        ): Shader {
+            requireNotNull(positions) { "positions should not be null" }
+            require(colors.size == positions.size) { "colors.length " + colors.size + "!= positions.length " + positions.size }
+            Stats.onNativeCall()
+            return Shader(
+                _nMakeTwoPointConicalGradient(
+                    x0,
+                    y0,
+                    r0,
+                    x1,
+                    y1,
+                    r1,
+                    colors,
+                    positions,
+                    style.tileMode.ordinal,
+                    style.getFlags(),
+                    style.getMatrixArray()
+                )
+            )
+        }
+
+        fun makeTwoPointConicalGradient(
+            p0: Point,
+            r0: Float,
+            p1: Point,
+            r1: Float,
+            colors: Array<Color4f>,
+            cs: ColorSpace?,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors, cs, positions, style)
+        }
+
+        fun makeTwoPointConicalGradient(
+            x0: Float,
+            y0: Float,
+            r0: Float,
+            x1: Float,
+            y1: Float,
+            r1: Float,
+            colors: Array<Color4f>,
+            cs: ColorSpace?,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return try {
+                requireNotNull(positions) { "positions should not be null" }
+                require(colors.size == positions.size) { "colors.length " + colors.size + "!= positions.length " + positions.size }
+                Stats.onNativeCall()
+                Shader(
+                    _nMakeTwoPointConicalGradientCS(
+                        x0,
+                        y0,
+                        r0,
+                        x1,
+                        y1,
+                        r1,
+                        Color4f.flattenArray(colors),
+                        getPtr(cs),
+                        positions,
+                        style.tileMode.ordinal,
+                        style.getFlags(),
+                        style.getMatrixArray()
+                    )
+                )
+            } finally {
+                Reference.reachabilityFence(cs)
+            }
+        }
+
+        // Sweep
+        fun makeSweepGradient(center: Point, colors: IntArray): Shader {
+            return makeSweepGradient(center._x, center._y, colors)
+        }
+
+        fun makeSweepGradient(x: Float, y: Float, colors: IntArray): Shader {
+            return makeSweepGradient(x, y, 0f, 360f, colors, null, GradientStyle.DEFAULT)
+        }
+
+        fun makeSweepGradient(center: Point, colors: IntArray, positions: FloatArray?): Shader {
+            return makeSweepGradient(center._x, center._y, colors, positions)
+        }
+
+        fun makeSweepGradient(x: Float, y: Float, colors: IntArray, positions: FloatArray?): Shader {
+            return makeSweepGradient(x, y, 0f, 360f, colors, positions, GradientStyle.DEFAULT)
+        }
+
+        fun makeSweepGradient(center: Point, colors: IntArray, positions: FloatArray?, style: GradientStyle): Shader {
+            return makeSweepGradient(center._x, center._y, colors, positions, style)
+        }
+
+        fun makeSweepGradient(
+            x: Float,
+            y: Float,
+            colors: IntArray,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return makeSweepGradient(x, y, 0f, 360f, colors, positions, style)
+        }
+
+        fun makeSweepGradient(
+            center: Point,
+            startAngle: Float,
+            endAngle: Float,
+            colors: IntArray,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return makeSweepGradient(center._x, center._y, startAngle, endAngle, colors, positions, style)
+        }
+
+        fun makeSweepGradient(
+            x: Float,
+            y: Float,
+            startAngle: Float,
+            endAngle: Float,
+            colors: IntArray,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            requireNotNull(positions) { "positions should not be null" }
+            require(colors.size == positions.size) { "colors.length " + colors.size + "!= positions.length " + positions.size }
+            Stats.onNativeCall()
+            return Shader(
+                _nMakeSweepGradient(
+                    x,
+                    y,
+                    startAngle,
+                    endAngle,
+                    colors,
+                    positions,
+                    style.tileMode.ordinal,
+                    style.getFlags(),
+                    style.getMatrixArray()
+                )
+            )
+        }
+
+        fun makeSweepGradient(
+            center: Point,
+            startAngle: Float,
+            endAngle: Float,
+            colors: Array<Color4f>,
+            cs: ColorSpace?,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return makeSweepGradient(center._x, center._y, startAngle, endAngle, colors, cs, positions, style)
+        }
+
+        fun makeSweepGradient(
+            x: Float,
+            y: Float,
+            startAngle: Float,
+            endAngle: Float,
+            colors: Array<Color4f>,
+            cs: ColorSpace?,
+            positions: FloatArray?,
+            style: GradientStyle
+        ): Shader {
+            return try {
+                requireNotNull(positions) { "positions should not be null" }
+                require(colors.size == positions.size) { "colors.length " + colors.size + "!= positions.length " + positions.size }
+                Stats.onNativeCall()
+                Shader(
+                    _nMakeSweepGradientCS(
+                        x,
+                        y,
+                        startAngle,
+                        endAngle,
+                        Color4f.flattenArray(colors),
+                        getPtr(cs),
+                        positions,
+                        style.tileMode.ordinal,
+                        style.getFlags(),
+                        style.getMatrixArray()
+                    )
+                )
+            } finally {
+                Reference.reachabilityFence(cs)
+            }
+        }
+
+        //
+        fun makeEmpty(): Shader {
+            Stats.onNativeCall()
+            return Shader(_nMakeEmpty())
+        }
+
+        fun makeColor(color: Int): Shader {
+            Stats.onNativeCall()
+            return Shader(_nMakeColor(color))
+        }
+
+        fun makeColor(color: Color4f, space: ColorSpace?): Shader {
+            return try {
+                Stats.onNativeCall()
+                Shader(
+                    _nMakeColorCS(
+                        color.r,
+                        color.g,
+                        color.b,
+                        color.a,
+                        getPtr(space)
+                    )
+                )
+            } finally {
+                Reference.reachabilityFence(space)
+            }
+        }
+
+        fun makeBlend(mode: BlendMode, dst: Shader?, src: Shader?): Shader {
+            return try {
+                Stats.onNativeCall()
+                Shader(
+                    _nMakeBlend(
+                        mode.ordinal,
+                        getPtr(dst),
+                        getPtr(src)
+                    )
+                )
+            } finally {
+                Reference.reachabilityFence(dst)
+                Reference.reachabilityFence(src)
+            }
+        }
+
+        fun makeLerp(t: Float, dst: Shader?, src: Shader?): Shader {
+            return try {
+                Stats.onNativeCall()
+                Shader(
+                    _nMakeLerp(
+                        t,
+                        getPtr(dst),
+                        getPtr(src)
+                    )
+                )
+            } finally {
+                Reference.reachabilityFence(dst)
+                Reference.reachabilityFence(src)
+            }
+        }
+
+        external fun _nMakeWithColorFilter(ptr: Long, colorFilterPtr: Long): Long
+        external fun _nMakeLinearGradient(
+            x0: Float,
+            y0: Float,
+            x1: Float,
+            y1: Float,
+            colors: IntArray?,
+            positions: FloatArray?,
+            tileType: Int,
+            flags: Int,
+            matrix: FloatArray?
+        ): Long
+
+        external fun _nMakeLinearGradientCS(
+            x0: Float,
+            y0: Float,
+            x1: Float,
+            y1: Float,
+            colors: FloatArray?,
+            colorSpacePtr: Long,
+            positions: FloatArray?,
+            tileType: Int,
+            flags: Int,
+            matrix: FloatArray?
+        ): Long
+
+        external fun _nMakeRadialGradient(
+            x: Float,
+            y: Float,
+            r: Float,
+            colors: IntArray?,
+            positions: FloatArray?,
+            tileType: Int,
+            flags: Int,
+            matrix: FloatArray?
+        ): Long
+
+        external fun _nMakeRadialGradientCS(
+            x: Float,
+            y: Float,
+            r: Float,
+            colors: FloatArray?,
+            colorSpacePtr: Long,
+            positions: FloatArray?,
+            tileType: Int,
+            flags: Int,
+            matrix: FloatArray?
+        ): Long
+
+        external fun _nMakeTwoPointConicalGradient(
+            x0: Float,
+            y0: Float,
+            r0: Float,
+            x1: Float,
+            y1: Float,
+            r1: Float,
+            colors: IntArray?,
+            positions: FloatArray?,
+            tileType: Int,
+            flags: Int,
+            matrix: FloatArray?
+        ): Long
+
+        external fun _nMakeTwoPointConicalGradientCS(
+            x0: Float,
+            y0: Float,
+            r0: Float,
+            x1: Float,
+            y1: Float,
+            r1: Float,
+            colors: FloatArray?,
+            colorSpacePtr: Long,
+            positions: FloatArray?,
+            tileType: Int,
+            flags: Int,
+            matrix: FloatArray?
+        ): Long
+
+        external fun _nMakeSweepGradient(
+            x: Float,
+            y: Float,
+            startAngle: Float,
+            endAngle: Float,
+            colors: IntArray?,
+            positions: FloatArray?,
+            tileType: Int,
+            flags: Int,
+            matrix: FloatArray?
+        ): Long
+
+        external fun _nMakeSweepGradientCS(
+            x: Float,
+            y: Float,
+            startAngle: Float,
+            endAngle: Float,
+            colors: FloatArray?,
+            colorSpacePtr: Long,
+            positions: FloatArray?,
+            tileType: Int,
+            flags: Int,
+            matrix: FloatArray?
+        ): Long
+
+        external fun _nMakeEmpty(): Long
+        external fun _nMakeColor(color: Int): Long
+        external fun _nMakeColorCS(r: Float, g: Float, b: Float, a: Float, colorSpacePtr: Long): Long
+        external fun _nMakeBlend(blendMode: Int, dst: Long, src: Long): Long
+        external fun _nMakeLerp(t: Float, dst: Long, src: Long): Long
+
+        init {
+            Library.staticLoad()
         }
     }
 
-    // Linear
-
-    public static Shader makeLinearGradient(Point p0, Point p1, int[] colors) {
-        return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors);
-    }
-
-    public static Shader makeLinearGradient(float x0, float y0, float x1, float y1, int[] colors) {
-        return makeLinearGradient(x0, y0, x1, y1, colors, null, GradientStyle.DEFAULT);
-    }
-    
-    public static Shader makeLinearGradient(Point p0, Point p1, int[] colors, float[] positions) {
-        return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors, positions);
-    }
-
-    public static Shader makeLinearGradient(float x0, float y0, float x1, float y1, int[] colors, float[] positions) {
-        return makeLinearGradient(x0, y0, x1, y1, colors, positions, GradientStyle.DEFAULT);
-    }
-
-    public static Shader makeLinearGradient(Point p0, Point p1, int[] colors, float[] positions, GradientStyle style) {
-        return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors, positions, style);
-    }
-
-    public static Shader makeLinearGradient(float x0, float y0, float x1, float y1, int[] colors, float[] positions, GradientStyle style) {
-        assert positions == null || colors.length == positions.length : "colors.length " + colors.length + "!= positions.length " + positions.length;
-        Stats.onNativeCall();
-        return new Shader(_nMakeLinearGradient(x0, y0, x1, y1, colors, positions, style.getTileMode().ordinal(), style._getFlags(), style._getMatrixArray()));
-    }
-
-    public static Shader makeLinearGradient(Point p0, Point p1, Color4f[] colors, ColorSpace cs, float[] positions, GradientStyle style) {
-        return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors, cs, positions, style);
-    }
-
-    public static Shader makeLinearGradient(float x0, float y0, float x1, float y1, Color4f[] colors, ColorSpace cs, float[] positions, GradientStyle style) {
-        try {
-            assert positions == null || colors.length == positions.length : "colors.length " + colors.length + "!= positions.length " + positions.length;
-            Stats.onNativeCall();
-            return new Shader(_nMakeLinearGradientCS(x0, y0, x1, y1, Color4f.flattenArray(colors), Native.getPtr(cs), positions, style.getTileMode().ordinal(), style._getFlags(), style._getMatrixArray()));
+    fun makeWithColorFilter(f: ColorFilter?): Shader {
+        return try {
+            Shader(_nMakeWithColorFilter(ptr, getPtr(f)))
         } finally {
-            Reference.reachabilityFence(cs);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(f)
         }
     }
-
-    // Radial
-
-    public static Shader makeRadialGradient(Point center, float r, int[] colors) {
-        return makeRadialGradient(center._x, center._y, r, colors);
-    }
-
-    public static Shader makeRadialGradient(float x, float y, float r, int[] colors) {
-        return makeRadialGradient(x, y, r, colors, null, GradientStyle.DEFAULT);
-    }
-
-    public static Shader makeRadialGradient(Point center, float r, int[] colors, float[] positions) {
-        return makeRadialGradient(center._x, center._y, r, colors, positions);
-    }
-
-    public static Shader makeRadialGradient(float x, float y, float r, int[] colors, float[] positions) {
-        return makeRadialGradient(x, y, r, colors, positions, GradientStyle.DEFAULT);
-    }
-
-    public static Shader makeRadialGradient(Point center, float r, int[] colors, float[] positions, GradientStyle style) {
-        return makeRadialGradient(center._x, center._y, r, colors, positions, style);
-    }
-
-    public static Shader makeRadialGradient(float x, float y, float r, int[] colors, float[] positions, GradientStyle style) {
-        assert positions == null || colors.length == positions.length : "colors.length " + colors.length + "!= positions.length " + positions.length;
-        Stats.onNativeCall();
-        return new Shader(_nMakeRadialGradient(x, y, r, colors, positions, style.getTileMode().ordinal(), style._getFlags(), style._getMatrixArray()));
-    }
-
-    public static Shader makeRadialGradient(Point center, float r, Color4f[] colors, ColorSpace cs, float[] positions, GradientStyle style) {
-        return makeRadialGradient(center._x, center._y, r, colors, cs, positions, style);
-    }
-
-    public static Shader makeRadialGradient(float x, float y, float r, Color4f[] colors, ColorSpace cs, float[] positions, GradientStyle style) {
-        try {
-            assert positions == null || colors.length == positions.length : "colors.length " + colors.length + "!= positions.length " + positions.length;
-            Stats.onNativeCall();
-            return new Shader(_nMakeRadialGradientCS(x, y, r, Color4f.flattenArray(colors), Native.getPtr(cs), positions, style.getTileMode().ordinal(), style._getFlags(), style._getMatrixArray()));
-        } finally {
-            Reference.reachabilityFence(cs);
-        }
-    }
-
-    // Two-point Conical
-
-    public static Shader makeTwoPointConicalGradient(Point p0, float r0, Point p1, float r1, int[] colors) {
-        return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors);
-    }
-
-    public static Shader makeTwoPointConicalGradient(float x0, float y0, float r0, float x1, float y1, float r1, int[] colors) {
-        return makeTwoPointConicalGradient(x0, y0, r0, x1, y1, r1, colors, null, GradientStyle.DEFAULT);
-    }
-
-    public static Shader makeTwoPointConicalGradient(Point p0, float r0, Point p1, float r1, int[] colors, float[] positions) {
-        return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors, positions);
-    }
-
-    public static Shader makeTwoPointConicalGradient(float x0, float y0, float r0, float x1, float y1, float r1, int[] colors, float[] positions) {
-        return makeTwoPointConicalGradient(x0, y0, r0, x1, y1, r1, colors, positions, GradientStyle.DEFAULT);
-    }
-
-    public static Shader makeTwoPointConicalGradient(Point p0, float r0, Point p1, float r1, int[] colors, float[] positions, GradientStyle style) {
-        return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors, positions, style);
-    }
-
-    public static Shader makeTwoPointConicalGradient(float x0, float y0, float r0, float x1, float y1, float r1, int[] colors, float[] positions, GradientStyle style) {
-        assert positions == null || colors.length == positions.length : "colors.length " + colors.length + "!= positions.length " + positions.length;
-        Stats.onNativeCall();
-        return new Shader(_nMakeTwoPointConicalGradient(x0, y0, r0, x1, y1, r1, colors, positions, style.getTileMode().ordinal(), style._getFlags(), style._getMatrixArray()));
-    }
-
-    public static Shader makeTwoPointConicalGradient(Point p0, float r0, Point p1, float r1, Color4f[] colors, ColorSpace cs, float[] positions, GradientStyle style) {
-        return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors, cs, positions, style);
-    }
-
-    public static Shader makeTwoPointConicalGradient(float x0, float y0, float r0, float x1, float y1, float r1, Color4f[] colors, ColorSpace cs, float[] positions, GradientStyle style) {
-        try {
-            assert positions == null || colors.length == positions.length : "colors.length " + colors.length + "!= positions.length " + positions.length;
-            Stats.onNativeCall();
-            return new Shader(_nMakeTwoPointConicalGradientCS(x0, y0, r0, x1, y1, r1, Color4f.flattenArray(colors), Native.getPtr(cs), positions, style.getTileMode().ordinal(), style._getFlags(), style._getMatrixArray()));
-        } finally {
-            Reference.reachabilityFence(cs);
-        }
-    }
-
-    // Sweep
-
-    public static Shader makeSweepGradient(Point center, int[] colors) {
-        return makeSweepGradient(center._x, center._y, colors);
-    }
-
-    public static Shader makeSweepGradient(float x, float y, int[] colors) {
-        return makeSweepGradient(x, y, 0, 360, colors, null, GradientStyle.DEFAULT);
-    }
-
-    public static Shader makeSweepGradient(Point center, int[] colors, float[] positions) {
-        return makeSweepGradient(center._x, center._y, colors, positions);
-    }
-
-    public static Shader makeSweepGradient(float x, float y, int[] colors, float[] positions) {
-        return makeSweepGradient(x, y, 0, 360, colors, positions, GradientStyle.DEFAULT);
-    }
-
-    public static Shader makeSweepGradient(Point center, int[] colors, float[] positions, GradientStyle style) {
-        return makeSweepGradient(center._x, center._y, colors, positions, style);
-    }
-
-    public static Shader makeSweepGradient(float x, float y, int[] colors, float[] positions, GradientStyle style) {
-        return makeSweepGradient(x, y, 0, 360, colors, positions, style);
-    }
-
-    public static Shader makeSweepGradient(Point center, float startAngle, float endAngle, int[] colors, float[] positions, GradientStyle style) {
-        return makeSweepGradient(center._x, center._y, startAngle, endAngle, colors, positions, style);
-    }
-
-    public static Shader makeSweepGradient(float x, float y, float startAngle, float endAngle, int[] colors, float[] positions, GradientStyle style) {
-        assert positions == null || colors.length == positions.length : "colors.length " + colors.length + "!= positions.length " + positions.length;
-        Stats.onNativeCall();
-        return new Shader(_nMakeSweepGradient(x, y, startAngle, endAngle, colors, positions, style.getTileMode().ordinal(), style._getFlags(), style._getMatrixArray()));
-    }
-
-    public static Shader makeSweepGradient(Point center, float startAngle, float endAngle, Color4f[] colors, ColorSpace cs, float[] positions, GradientStyle style) {
-        return makeSweepGradient(center._x, center._y, startAngle, endAngle, colors, cs, positions, style);
-    }
-
-    public static Shader makeSweepGradient(float x, float y, float startAngle, float endAngle, Color4f[] colors, ColorSpace cs, float[] positions, GradientStyle style) {
-        try {
-            assert positions == null || colors.length == positions.length : "colors.length " + colors.length + "!= positions.length " + positions.length;
-            Stats.onNativeCall();
-            return new Shader(_nMakeSweepGradientCS(x, y, startAngle, endAngle, Color4f.flattenArray(colors), Native.getPtr(cs), positions, style.getTileMode().ordinal(), style._getFlags(), style._getMatrixArray()));
-        } finally {
-            Reference.reachabilityFence(cs);
-        }
-    }
-
-    //
-
-    public static Shader makeEmpty() {
-        Stats.onNativeCall();
-        return new Shader(_nMakeEmpty());
-    }
-
-    public static Shader makeColor(int color) {
-        Stats.onNativeCall();
-        return new Shader(_nMakeColor(color));
-    }
-
-    public static Shader makeColor(Color4f color, ColorSpace space) {
-        try {
-            Stats.onNativeCall();
-            return new Shader(_nMakeColorCS(color.getR(), color.getG(), color.getB(), color.getA(), Native.getPtr(space)));
-        } finally {
-            Reference.reachabilityFence(space);
-        }
-    }
-
-    public static Shader makeBlend(BlendMode mode, Shader dst, Shader src) {
-        try {
-            Stats.onNativeCall();
-            return new Shader(_nMakeBlend(mode.ordinal(), Native.getPtr(dst), Native.getPtr(src)));
-        } finally {
-            Reference.reachabilityFence(dst);
-            Reference.reachabilityFence(src);
-        }
-    }
-
-    public static Shader makeLerp(float t, Shader dst, Shader src) {
-        try {
-            Stats.onNativeCall();
-            return new Shader(_nMakeLerp(t, Native.getPtr(dst), Native.getPtr(src)));
-        } finally {
-            Reference.reachabilityFence(dst);
-            Reference.reachabilityFence(src);
-        }
-    }
-
-    @ApiStatus.Internal
-    public Shader(long ptr) {
-        super(ptr);
-    }
-
-    public static native long _nMakeWithColorFilter(long ptr, long colorFilterPtr);
-    public static native long _nMakeLinearGradient(float x0, float y0, float x1, float y1, int[] colors, float[] positions, int tileType, int flags, float[] matrix);
-    public static native long _nMakeLinearGradientCS(float x0, float y0, float x1, float y1, float[] colors, long colorSpacePtr, float[] positions, int tileType, int flags, float[] matrix);
-    public static native long _nMakeRadialGradient(float x, float y, float r, int[] colors, float[] positions, int tileType, int flags, float[] matrix);
-    public static native long _nMakeRadialGradientCS(float x, float y, float r, float[] colors, long colorSpacePtr, float[] positions, int tileType, int flags, float[] matrix);
-    public static native long _nMakeTwoPointConicalGradient(float x0, float y0, float r0, float x1, float y1, float r1, int[] colors, float[] positions, int tileType, int flags, float[] matrix);
-    public static native long _nMakeTwoPointConicalGradientCS(float x0, float y0, float r0, float x1, float y1, float r1, float[] colors, long colorSpacePtr, float[] positions, int tileType, int flags, float[] matrix);
-    public static native long _nMakeSweepGradient(float x, float y, float startAngle, float endAngle, int[] colors, float[] positions, int tileType, int flags, float[] matrix);
-    public static native long _nMakeSweepGradientCS(float x, float y, float startAngle, float endAngle, float[] colors, long colorSpacePtr, float[] positions, int tileType, int flags, float[] matrix);
-    public static native long _nMakeEmpty();
-    public static native long _nMakeColor(int color);
-    public static native long _nMakeColorCS(float r, float g, float b, float a, long colorSpacePtr);
-    public static native long _nMakeBlend(int blendMode, long dst, long src);
-    public static native long _nMakeLerp(float t, long dst, long src);
 }

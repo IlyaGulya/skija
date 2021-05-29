@@ -1,311 +1,367 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import java.lang.ref.*;
-import org.jetbrains.annotations.*;
-import org.jetbrains.skija.impl.*;
+import org.jetbrains.skija.impl.*
+import java.lang.ref.Reference
 
-public class Region extends Managed {
-    static { Library.staticLoad(); }
-    
-    public enum Op {
+class Region : Managed(_nMake(), _FinalizerHolder.PTR) {
+    companion object {
+        external fun _nMake(): Long
+        external fun _nGetFinalizer(): Long
+        external fun _nSet(ptr: Long, regoinPtr: Long): Boolean
+        external fun _nIsEmpty(ptr: Long): Boolean
+        external fun _nIsRect(ptr: Long): Boolean
+        external fun _nIsComplex(ptr: Long): Boolean
+        external fun _nGetBounds(ptr: Long): IRect
+        external fun _nComputeRegionComplexity(ptr: Long): Int
+        external fun _nGetBoundaryPath(ptr: Long, pathPtr: Long): Boolean
+        external fun _nSetEmpty(ptr: Long): Boolean
+        external fun _nSetRect(ptr: Long, left: Int, top: Int, right: Int, bottom: Int): Boolean
+        external fun _nSetRects(ptr: Long, rects: IntArray?): Boolean
+        external fun _nSetRegion(ptr: Long, regionPtr: Long): Boolean
+        external fun _nSetPath(ptr: Long, pathPtr: Long, regionPtr: Long): Boolean
+        external fun _nIntersectsIRect(ptr: Long, left: Int, top: Int, right: Int, bottom: Int): Boolean
+        external fun _nIntersectsRegion(ptr: Long, regionPtr: Long): Boolean
+        external fun _nContainsIPoint(ptr: Long, x: Int, y: Int): Boolean
+        external fun _nContainsIRect(ptr: Long, left: Int, top: Int, right: Int, bottom: Int): Boolean
+        external fun _nContainsRegion(ptr: Long, regionPtr: Long): Boolean
+        external fun _nQuickContains(ptr: Long, left: Int, top: Int, right: Int, bottom: Int): Boolean
+        external fun _nQuickRejectIRect(ptr: Long, left: Int, top: Int, right: Int, bottom: Int): Boolean
+        external fun _nQuickRejectRegion(ptr: Long, regionPtr: Long): Boolean
+        external fun _nTranslate(ptr: Long, dx: Int, dy: Int)
+        external fun _nOpIRect(ptr: Long, left: Int, top: Int, right: Int, bottom: Int, op: Int): Boolean
+        external fun _nOpRegion(ptr: Long, regionPtr: Long, op: Int): Boolean
+        external fun _nOpIRectRegion(
+            ptr: Long,
+            left: Int,
+            top: Int,
+            right: Int,
+            bottom: Int,
+            regionPtr: Long,
+            op: Int
+        ): Boolean
+
+        external fun _nOpRegionIRect(
+            ptr: Long,
+            regionPtr: Long,
+            left: Int,
+            top: Int,
+            right: Int,
+            bottom: Int,
+            op: Int
+        ): Boolean
+
+        external fun _nOpRegionRegion(ptr: Long, regionPtrA: Long, regionPtrB: Long, op: Int): Boolean
+
+        init {
+            Library.staticLoad()
+        }
+    }
+
+    enum class Op {
         DIFFERENCE,
         INTERSECT,
-        UNION,
-        XOR,
+        UNION, XOR,
         REVERSE_DIFFERENCE,
-        REPLACE
+        REPLACE,
     }
 
-    public Region() {
-        super(_nMake(), _FinalizerHolder.PTR);
-        Stats.onNativeCall();
-    }
-
-    public boolean set(Region r) {
-        try {
-            Stats.onNativeCall();
-            return _nSet(_ptr, Native.getPtr(r));
+    fun set(r: Region?): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nSet(ptr, getPtr(r))
         } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(r);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(r)
         }
     }
 
-    public boolean isEmpty() {
-        try {
-            Stats.onNativeCall();
-            return _nIsEmpty(_ptr);
+    val isEmpty: Boolean
+        get() = try {
+            Stats.onNativeCall()
+            _nIsEmpty(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
+        }
+    val isRect: Boolean
+        get() = try {
+            Stats.onNativeCall()
+            _nIsRect(ptr)
+        } finally {
+            Reference.reachabilityFence(this)
+        }
+    val isComplex: Boolean
+        get() = try {
+            Stats.onNativeCall()
+            _nIsComplex(ptr)
+        } finally {
+            Reference.reachabilityFence(this)
+        }
+    val bounds: IRect
+        get() = try {
+            Stats.onNativeCall()
+            _nGetBounds(ptr)
+        } finally {
+            Reference.reachabilityFence(this)
+        }
+
+    fun computeRegionComplexity(): Int {
+        return try {
+            Stats.onNativeCall()
+            _nComputeRegionComplexity(ptr)
+        } finally {
+            Reference.reachabilityFence(this)
         }
     }
 
-    public boolean isRect() {
-        try {
-            Stats.onNativeCall();
-            return _nIsRect(_ptr);
+    fun getBoundaryPath(p: Path?): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nGetBoundaryPath(
+                ptr,
+                getPtr(p)
+            )
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(p)
         }
     }
 
-    public boolean isComplex() {
-        try {
-            Stats.onNativeCall();
-            return _nIsComplex(_ptr);
+    fun setEmpty(): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nSetEmpty(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
-    public IRect getBounds() {
-        try {
-            Stats.onNativeCall();
-            return _nGetBounds(_ptr);
+    fun setRect(rect: IRect): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nSetRect(ptr, rect._left, rect._top, rect._right, rect._bottom)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
-    public int computeRegionComplexity() {
-        try {
-            Stats.onNativeCall();
-            return _nComputeRegionComplexity(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
-        }
-    }
-
-    public boolean getBoundaryPath(Path p) {
-        try {
-            Stats.onNativeCall();
-            return _nGetBoundaryPath(_ptr, Native.getPtr(p));
-        } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(p);
-        }
-    }
-
-    public boolean setEmpty() {
-        try {
-            Stats.onNativeCall();
-            return _nSetEmpty(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
-        }
-    }
-
-    public boolean setRect(IRect rect) {
-        try {
-            Stats.onNativeCall();
-            return _nSetRect(_ptr, rect._left, rect._top, rect._right, rect._bottom);
-        } finally {
-            Reference.reachabilityFence(this);
-        }
-    }
-
-    public boolean setRects(IRect[] rects) {
-        try {
-            int[] arr = new int[rects.length * 4];
-            for (int i = 0; i < rects.length; ++i) {
-                arr[i * 4]     = rects[i]._left;
-                arr[i * 4 + 1] = rects[i]._top;
-                arr[i * 4 + 2] = rects[i]._right;
-                arr[i * 4 + 3] = rects[i]._bottom;
+    fun setRects(rects: Array<IRect>): Boolean {
+        return try {
+            val arr = IntArray(rects.size * 4)
+            for (i in rects.indices) {
+                arr[i * 4] = rects[i]._left
+                arr[i * 4 + 1] = rects[i]._top
+                arr[i * 4 + 2] = rects[i]._right
+                arr[i * 4 + 3] = rects[i]._bottom
             }
-            Stats.onNativeCall();
-            return _nSetRects(_ptr, arr);
+            Stats.onNativeCall()
+            _nSetRects(ptr, arr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
-    public boolean setRegion(Region r) {
+    fun setRegion(r: Region?): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nSetRegion(ptr, getPtr(r))
+        } finally {
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(r)
+        }
+    }
+
+    fun setPath(path: Path?, clip: Region?): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nSetPath(
+                ptr,
+                getPtr(path),
+                getPtr(clip)
+            )
+        } finally {
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(path)
+            Reference.reachabilityFence(clip)
+        }
+    }
+
+    fun intersects(rect: IRect): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nIntersectsIRect(ptr, rect._left, rect._top, rect._right, rect._bottom)
+        } finally {
+            Reference.reachabilityFence(this)
+        }
+    }
+
+    fun intersects(r: Region?): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nIntersectsRegion(
+                ptr,
+                getPtr(r)
+            )
+        } finally {
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(r)
+        }
+    }
+
+    fun contains(x: Int, y: Int): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nContainsIPoint(ptr, x, y)
+        } finally {
+            Reference.reachabilityFence(this)
+        }
+    }
+
+    operator fun contains(rect: IRect): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nContainsIRect(ptr, rect._left, rect._top, rect._right, rect._bottom)
+        } finally {
+            Reference.reachabilityFence(this)
+        }
+    }
+
+    operator fun contains(r: Region?): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nContainsRegion(ptr, getPtr(r))
+        } finally {
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(r)
+        }
+    }
+
+    fun quickContains(rect: IRect): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nQuickContains(ptr, rect._left, rect._top, rect._right, rect._bottom)
+        } finally {
+            Reference.reachabilityFence(this)
+        }
+    }
+
+    fun quickReject(rect: IRect): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nQuickRejectIRect(ptr, rect._left, rect._top, rect._right, rect._bottom)
+        } finally {
+            Reference.reachabilityFence(this)
+        }
+    }
+
+    fun quickReject(r: Region?): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nQuickRejectRegion(
+                ptr,
+                getPtr(r)
+            )
+        } finally {
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(r)
+        }
+    }
+
+    fun translate(dx: Int, dy: Int) {
         try {
-            Stats.onNativeCall();
-            return _nSetRegion(_ptr, Native.getPtr(r));
+            Stats.onNativeCall()
+            _nTranslate(ptr, dx, dy)
         } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(r);
+            Reference.reachabilityFence(this)
         }
     }
 
-    public boolean setPath(Path path, Region clip) {
-        try {
-            Stats.onNativeCall();
-            return _nSetPath(_ptr, Native.getPtr(path), Native.getPtr(clip));
+    fun op(rect: IRect, op: Op): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nOpIRect(
+                ptr,
+                rect._left,
+                rect._top,
+                rect._right,
+                rect._bottom,
+                op.ordinal
+            )
         } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(path);
-            Reference.reachabilityFence(clip);
+            Reference.reachabilityFence(this)
         }
     }
 
-    public boolean intersects(IRect rect) {
-        try {
-            Stats.onNativeCall();
-            return _nIntersectsIRect(_ptr, rect._left, rect._top, rect._right, rect._bottom);
+    fun op(r: Region?, op: Op): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nOpRegion(
+                ptr,
+                getPtr(r),
+                op.ordinal
+            )
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(r)
         }
     }
 
-    public boolean intersects(Region r) {
-        try {
-            Stats.onNativeCall();
-            return _nIntersectsRegion(_ptr, Native.getPtr(r));
+    fun op(rect: IRect, r: Region?, op: Op): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nOpIRectRegion(
+                ptr,
+                rect._left,
+                rect._top,
+                rect._right,
+                rect._bottom,
+                getPtr(r),
+                op.ordinal
+            )
         } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(r);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(r)
         }
     }
 
-    public boolean contains(int x, int y) {
-        try {
-            Stats.onNativeCall();
-            return _nContainsIPoint(_ptr, x, y);
+    fun op(r: Region?, rect: IRect, op: Op): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nOpRegionIRect(
+                ptr,
+                getPtr(r),
+                rect._left,
+                rect._top,
+                rect._right,
+                rect._bottom,
+                op.ordinal
+            )
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(r)
         }
     }
 
-    public boolean contains(IRect rect) {
-        try {
-            Stats.onNativeCall();
-            return _nContainsIRect(_ptr, rect._left, rect._top, rect._right, rect._bottom);
+    fun op(a: Region?, b: Region?, op: Op): Boolean {
+        return try {
+            Stats.onNativeCall()
+            _nOpRegionRegion(
+                ptr,
+                getPtr(a),
+                getPtr(b),
+                op.ordinal
+            )
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(a)
+            Reference.reachabilityFence(b)
         }
     }
 
-    public boolean contains(Region r) {
-        try {
-            Stats.onNativeCall();
-            return _nContainsRegion(_ptr, Native.getPtr(r));
-        } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(r);
-        }
+    internal object _FinalizerHolder {
+        val PTR = _nGetFinalizer()
     }
 
-    public boolean quickContains(IRect rect) {
-        try {
-            Stats.onNativeCall();
-            return _nQuickContains(_ptr, rect._left, rect._top, rect._right, rect._bottom);
-        } finally {
-            Reference.reachabilityFence(this);
-        }
+    init {
+        Stats.onNativeCall()
     }
-
-    public boolean quickReject(IRect rect) {
-        try {
-            Stats.onNativeCall();
-            return _nQuickRejectIRect(_ptr, rect._left, rect._top, rect._right, rect._bottom);
-        } finally {
-            Reference.reachabilityFence(this);
-        }
-    }
-
-    public boolean quickReject(Region r) {
-        try {
-            Stats.onNativeCall();
-            return _nQuickRejectRegion(_ptr, Native.getPtr(r));
-        } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(r);
-        }
-    }
-
-    public void translate(int dx, int dy) {
-        try {
-            Stats.onNativeCall();
-            _nTranslate(_ptr, dx, dy);
-        } finally {
-            Reference.reachabilityFence(this);
-        }
-    }
-
-    public boolean op(IRect rect, Op op) {
-        try {
-            Stats.onNativeCall();
-            return _nOpIRect(_ptr, rect._left, rect._top, rect._right, rect._bottom, op.ordinal());
-        } finally {
-            Reference.reachabilityFence(this);
-        }
-    }
-
-    public boolean op(Region r, Op op) {
-        try {
-            Stats.onNativeCall();
-            return _nOpRegion(_ptr, Native.getPtr(r), op.ordinal());
-        } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(r);
-        }
-    }
-
-    public boolean op(IRect rect, Region r, Op op) {
-        try {
-            Stats.onNativeCall();
-            return _nOpIRectRegion(_ptr, rect._left, rect._top, rect._right, rect._bottom, Native.getPtr(r), op.ordinal());
-        } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(r);
-        }
-    }
-
-    public boolean op(Region r, IRect rect, Op op) {
-        try {
-            Stats.onNativeCall();
-            return _nOpRegionIRect(_ptr, Native.getPtr(r), rect._left, rect._top, rect._right, rect._bottom, op.ordinal());
-        } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(r);
-        }
-    }
-
-    public boolean op(Region a, Region b, Op op) {
-        try {
-            Stats.onNativeCall();
-            return _nOpRegionRegion(_ptr, Native.getPtr(a), Native.getPtr(b), op.ordinal());
-        } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(a);
-            Reference.reachabilityFence(b);
-        }
-    }
-
-    @ApiStatus.Internal
-    public static class _FinalizerHolder {
-        public static final long PTR = _nGetFinalizer();
-    }
-
-    public static native long    _nMake();
-    public static native long    _nGetFinalizer();
-    public static native boolean _nSet(long ptr, long regoinPtr);
-    public static native boolean _nIsEmpty(long ptr);
-    public static native boolean _nIsRect(long ptr);
-    public static native boolean _nIsComplex(long ptr);
-    public static native IRect   _nGetBounds(long ptr);
-    public static native int     _nComputeRegionComplexity(long ptr);
-    public static native boolean _nGetBoundaryPath(long ptr, long pathPtr);
-    public static native boolean _nSetEmpty(long ptr);
-    public static native boolean _nSetRect(long ptr, int left, int top, int right, int bottom);
-    public static native boolean _nSetRects(long ptr, int[] rects);
-    public static native boolean _nSetRegion(long ptr, long regionPtr);
-    public static native boolean _nSetPath(long ptr, long pathPtr, long regionPtr);
-    public static native boolean _nIntersectsIRect(long ptr, int left, int top, int right, int bottom);
-    public static native boolean _nIntersectsRegion(long ptr, long regionPtr);
-    public static native boolean _nContainsIPoint(long ptr, int x, int y);
-    public static native boolean _nContainsIRect(long ptr, int left, int top, int right, int bottom);
-    public static native boolean _nContainsRegion(long ptr, long regionPtr);
-    public static native boolean _nQuickContains(long ptr, int left, int top, int right, int bottom);
-    public static native boolean _nQuickRejectIRect(long ptr, int left, int top, int right, int bottom);
-    public static native boolean _nQuickRejectRegion(long ptr, long regionPtr);
-    public static native void    _nTranslate(long ptr, int dx, int dy);
-    public static native boolean _nOpIRect(long ptr, int left, int top, int right, int bottom, int op);
-    public static native boolean _nOpRegion(long ptr, long regionPtr, int op);
-    public static native boolean _nOpIRectRegion(long ptr, int left, int top, int right, int bottom, long regionPtr, int op);
-    public static native boolean _nOpRegionIRect(long ptr, long regionPtr, int left, int top, int right, int bottom, int op);
-    public static native boolean _nOpRegionRegion(long ptr, long regionPtrA, long regionPtrB, int op);
 }

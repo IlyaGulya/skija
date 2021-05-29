@@ -1,6 +1,6 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-public enum FilterMode {
+enum class FilterMode {
     /**
      * single sample point (nearest neighbor)
      */

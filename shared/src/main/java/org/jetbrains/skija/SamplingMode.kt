@@ -1,17 +1,20 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import lombok.*;
-import org.jetbrains.annotations.*;
+import org.jetbrains.annotations.ApiStatus
 
 /**
  * @see FilterMipmap
+ *
  * @see CubicResampler
  */
-public interface SamplingMode {
-    public static final SamplingMode DEFAULT = new FilterMipmap(FilterMode.NEAREST, MipmapMode.NONE);
-    public static final SamplingMode LINEAR = new FilterMipmap(FilterMode.LINEAR, MipmapMode.NONE);
-    public static final SamplingMode MITCHELL = new CubicResampler(0.33333334f, 0.33333334f);
-    public static final SamplingMode CATMULL_ROM = new CubicResampler(0, 0.5f);
+interface SamplingMode {
+    @ApiStatus.Internal
+    fun pack(): Long
 
-    @ApiStatus.Internal long _pack();
+    companion object {
+        val DEFAULT: SamplingMode = FilterMipmap(FilterMode.NEAREST, MipmapMode.NONE)
+        val LINEAR: SamplingMode = FilterMipmap(FilterMode.LINEAR, MipmapMode.NONE)
+        val MITCHELL: SamplingMode = CubicResampler(0.33333334f, 0.33333334f)
+        val CATMULL_ROM: SamplingMode = CubicResampler(0f, 0.5f)
+    }
 }
