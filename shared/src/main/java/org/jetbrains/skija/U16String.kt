@@ -1,42 +1,42 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import java.lang.ref.*;
-import lombok.*;
-import org.jetbrains.annotations.*;
-import org.jetbrains.skija.impl.*;
+import org.jetbrains.skija.impl.Library
+import org.jetbrains.skija.impl.Managed
+import org.jetbrains.skija.impl.Stats
+import java.lang.ref.Reference
 
 /**
  * Java mirror of std::vector&lt;jchar&gt; (UTF-16)
  */
-public class U16String extends Managed {
-    static { Library.staticLoad(); }
-    
-    @ApiStatus.Internal
-    public U16String(long ptr) {
-        super(ptr, _FinalizerHolder.PTR);
-    }
+class U16String internal constructor(
+    ptr: Long
+) : Managed(ptr, _FinalizerHolder.PTR) {
+    companion object {
+        internal external fun _nMake(s: String?): Long
 
-    public U16String(String s) {
-        this(_nMake(s));
-        Stats.onNativeCall();
-    }
+        internal external fun _nGetFinalizer(): Long
 
-    @Override
-    public String toString() {
-        try {
-            Stats.onNativeCall();
-            return _nToString(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
+        internal external fun _nToString(ptr: Long): String
+
+        init {
+            Library.staticLoad()
         }
     }
 
-    @ApiStatus.Internal
-    public static class _FinalizerHolder {
-        public static final long PTR = _nGetFinalizer();
+    constructor(s: String?) : this(_nMake(s)) {
+        Stats.onNativeCall()
     }
 
-    @ApiStatus.Internal public static native long _nMake(String s);
-    @ApiStatus.Internal public static native long _nGetFinalizer();
-    @ApiStatus.Internal public static native String _nToString(long ptr);
+    override fun toString(): String {
+        return try {
+            Stats.onNativeCall()
+            _nToString(ptr)
+        } finally {
+            Reference.reachabilityFence(this)
+        }
+    }
+
+    internal object _FinalizerHolder {
+        val PTR = _nGetFinalizer()
+    }
 }
