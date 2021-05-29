@@ -1,25 +1,28 @@
-package org.jetbrains.skija.impl;
+package org.jetbrains.skija.impl
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap
 
-public class Stats {
-    public static boolean enabled = false;
-    public static long nativeCalls = 0;
-    public static Map<String, Integer> allocated = new ConcurrentHashMap<>();
-
-    public static void onNativeCall() {
-        if (enabled)
-            nativeCalls++;
+object Stats {
+    var enabled = false
+    var nativeCalls: Long = 0
+    var allocated: MutableMap<String, Int> = ConcurrentHashMap()
+    fun onNativeCall() {
+        if (enabled) nativeCalls++
     }
 
-    public static void onAllocated(String className) {
-        if (enabled)
-            allocated.merge(className, 1, Integer::sum);
+    fun onAllocated(className: String) {
+        if (enabled) allocated.merge(className, 1) { a: Int?, b: Int? ->
+            Integer.sum(
+                a!!, b!!
+            )
+        }
     }
 
-    public static void onDeallocated(String className) {
-        if (enabled)
-            allocated.merge(className, -1, Integer::sum);
+    fun onDeallocated(className: String) {
+        if (enabled) allocated.merge(className, -1) { a: Int?, b: Int? ->
+            Integer.sum(
+                a!!, b!!
+            )
+        }
     }
 }
