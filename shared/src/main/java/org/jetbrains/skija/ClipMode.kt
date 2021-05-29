@@ -1,6 +1,6 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-public enum ClipMode {
+enum class ClipMode {
     DIFFERENCE,
-    INTERSECT
+    INTERSECT,
 }

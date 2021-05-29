@@ -1,62 +1,62 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-public class Color {
+object Color {
     // TODO premultiply, alpha
-    public static int makeLerp(int c1, int c2, float weight) {
-        int r = (int) (getR(c1) * weight + getR(c2) * (1 - weight));
-        int g = (int) (getG(c1) * weight + getG(c2) * (1 - weight));
-        int b = (int) (getB(c1) * weight + getB(c2) * (1 - weight));
-        return makeRGB(r, g, b);
+    fun makeLerp(c1: Int, c2: Int, weight: Float): Int {
+        val r = (getR(c1) * weight + getR(c2) * (1 - weight)).toInt()
+        val g = (getG(c1) * weight + getG(c2) * (1 - weight)).toInt()
+        val b = (getB(c1) * weight + getB(c2) * (1 - weight)).toInt()
+        return makeRGB(r, g, b)
     }
 
-    public static int makeARGB(int a, int r, int g, int b) {
-        assert 0 <= a && a <= 255 : "Alpha is out of 0..255 range: " + a;
-        assert 0 <= r && r <= 255 : "Red is out of 0..255 range: " + r;
-        assert 0 <= g && g <= 255 : "Green is out of 0..255 range: " + g;
-        assert 0 <= b && b <= 255 : "Blue is out of 0..255 range: " + b;
-        return ((a & 0xFF) << 24)
-            | ((r & 0xFF) << 16)
-            | ((g & 0xFF) << 8)
-            | (b & 0xFF);
+    fun makeARGB(a: Int, r: Int, g: Int, b: Int): Int {
+        assert(0 <= a && a <= 255) { "Alpha is out of 0..255 range: $a" }
+        assert(0 <= r && r <= 255) { "Red is out of 0..255 range: $r" }
+        assert(0 <= g && g <= 255) { "Green is out of 0..255 range: $g" }
+        assert(0 <= b && b <= 255) { "Blue is out of 0..255 range: $b" }
+        return (a and 0xFF shl 24
+                or (r and 0xFF shl 16)
+                or (g and 0xFF shl 8)
+                or (b and 0xFF))
     }
 
-    public static int makeRGB(int r, int g, int b) {
-        return makeARGB(255, r, g, b);
+    fun makeRGB(r: Int, g: Int, b: Int): Int {
+        return makeARGB(255, r, g, b)
     }
 
-    public static int getA(int color) {
-        return (color >> 24) & 0xFF;
+    fun getA(color: Int): Int {
+        return color shr 24 and 0xFF
     }
 
-    public static int getR(int color) {
-        return (color >> 16) & 0xFF;
+    fun getR(color: Int): Int {
+        return color shr 16 and 0xFF
     }
 
-    public static int getG(int color) {
-        return (color >> 8) & 0xFF;
+    fun getG(color: Int): Int {
+        return color shr 8 and 0xFF
     }
 
-    public static int getB(int color) {
-        return color & 0xFF;
-    }    
-
-    public static int withA(int color, int a) {
-        assert 0 <= a && a <= 255 : "Alpha is out of 0..255 range: " + a;
-        return ((a & 0xFF) << 24) | (color & 0x00FFFFFF);
+    fun getB(color: Int): Int {
+        return color and 0xFF
     }
 
-    public static int withR(int color, int r) {
-        assert 0 <= r && r <= 255 : "Red is out of 0..255 range: " + r;
-        return ((r & 0xFF) << 16) | (color & 0xFF00FFFF);
+    fun withA(color: Int, a: Int): Int {
+        assert(0 <= a && a <= 255) { "Alpha is out of 0..255 range: $a" }
+        return a and 0xFF shl 24 or (color and 0x00FFFFFF)
     }
 
-    public static int withG(int color, int g) {
-        assert 0 <= g && g <= 255 : "Green is out of 0..255 range: " + g;
-        return ((g & 0xFF) << 8) | (color & 0xFFFF00FF);
+    fun withR(color: Int, r: Int): Int {
+        assert(0 <= r && r <= 255) { "Red is out of 0..255 range: $r" }
+        return r and 0xFF shl 16 or (color and -0xff0001)
     }
 
-    public static int withB(int color, int b) {
-        assert 0 <= b && b <= 255 : "Blue is out of 0..255 range: " + b;
-        return (b & 0xFF) | (color & 0xFFFFFF00);
+    fun withG(color: Int, g: Int): Int {
+        assert(0 <= g && g <= 255) { "Green is out of 0..255 range: $g" }
+        return g and 0xFF shl 8 or (color and -0xff01)
+    }
+
+    fun withB(color: Int, b: Int): Int {
+        assert(0 <= b && b <= 255) { "Blue is out of 0..255 range: $b" }
+        return b and 0xFF or (color and -0x100)
     }
 }

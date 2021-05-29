@@ -1,8 +1,8 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-public enum ColorChannel {
+enum class ColorChannel {
     R,
     G,
     B,
-    A
+    A,
 }
