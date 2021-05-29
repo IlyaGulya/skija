@@ -1,54 +1,58 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import lombok.Data;
-import org.jetbrains.annotations.*;
+import lombok.Data
 
 /**
- * <p>4x4 matrix used by SkCanvas and other parts of Skia.</p>
  *
- *  Skia assumes a right-handed coordinate system:
- *      +X goes to the right
- *      +Y goes down
- *      +Z goes into the screen (away from the viewer)
+ * 4x4 matrix used by SkCanvas and other parts of Skia.
+ *
+ * Skia assumes a right-handed coordinate system:
+ * +X goes to the right
+ * +Y goes down
+ * +Z goes into the screen (away from the viewer)
  */
-
 @Data
-public class Matrix44 {
+class Matrix44(
     /**
      * Matrix elements are in row-major order.
      */
-    @ApiStatus.Internal
-    public final float[] _mat;
+    internal vararg val mat: Float
+) {
 
     /**
-     *  The constructor parameters are in row-major order.
+     * The constructor parameters are in row-major order.
      */
-    public Matrix44(float... mat) {
-        assert mat.length == 16 : "Expected 16 elements, got " + mat == null ? null : mat.length;
-        _mat = mat;
+    init {
+        require(mat.size == 16) { "Expected 16 elements, got ${mat.size}" }
     }
 
-    public static final Matrix44 IDENTITY = new Matrix44(
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-    );
-
     /**
-     * <p>When converting from Matrix44 to Matrix33, the third row and
-     * column is dropped.</p>
-     * 
-     * <pre><code>
+     *
+     * When converting from Matrix44 to Matrix33, the third row and
+     * column is dropped.
+     *
+     * <pre>`
      * [ a b _ c ]      [ a b c ]
-     * [ d e _ f ]  -&gt;  [ d e f ]
+     * [ d e _ f ]  ->  [ d e f ]
      * [ _ _ _ _ ]      [ g h i ]
-     * [ g h _ i ]                 
-     * </code></pre>
+     * [ g h _ i ]
+    `</pre> *
      */
-    public Matrix33 asMatrix33() {
-        return new Matrix33(_mat[0],  _mat[1],  _mat[3],
-                            _mat[4],  _mat[5],  _mat[7],
-                            _mat[12], _mat[13], _mat[15]);
+    fun asMatrix33(): Matrix33 {
+        return Matrix33(
+            mat[0], mat[1], mat[3],
+            mat[4], mat[5], mat[7],
+            mat[12], mat[13], mat[15]
+        )
     }
+
+    companion object {
+        val IDENTITY = Matrix44(
+            1f, 0f, 0f, 0f,
+            0f, 1f, 0f, 0f,
+            0f, 0f, 1f, 0f,
+            0f, 0f, 0f, 1f
+        )
+    }
+
 }
