@@ -53,7 +53,7 @@ open class Rect @Internal constructor(
 
     fun offset(vec: Point?): Rect {
         requireNotNull(vec) { "Rect::offset expected vec != null" }
-        return offset(vec._x, vec._y)
+        return offset(vec.x, vec.y)
     }
 
     @Contract("-> new")
@@ -97,7 +97,7 @@ open class Rect @Internal constructor(
         @Contract("_, _ -> new")
         fun makeWH(size: Point?): Rect {
             requireNotNull(size) { "Rect::makeWH expected size != null" }
-            return makeWH(size._x, size._y)
+            return makeWH(size.x, size.y)
         }
 
         @Contract("_, _, _, _ -> new")

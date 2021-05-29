@@ -207,7 +207,7 @@ class Matrix33(
          * @return       Matrix33 with rotation
          */
         fun makeRotate(deg: Float, pivot: Point): Matrix33 {
-            return makeRotate(deg, pivot._x, pivot._y)
+            return makeRotate(deg, pivot.x, pivot.y)
         }
 
         /**

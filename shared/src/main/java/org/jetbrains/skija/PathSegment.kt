@@ -1,93 +1,147 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import java.util.*
 
-import java.util.Objects;
+data class PathSegment(
+    val verb: PathVerb? = null,
+    val p0: Point? = null,
+    val p1: Point? = null,
+    val p2: Point? = null,
+    val p3: Point? = null,
+    val conicWeight: Float = 0f,
+    val closeLine: Boolean = false,
+    val closedContour: Boolean = false,
+) {
 
-@AllArgsConstructor
-@Getter
-public class PathSegment {
-    public final PathVerb _verb;
-    public final Point   _p0;
-    public final Point   _p1;
-    public final Point   _p2;
-    public final Point   _p3;
-    public final float   _conicWeight;
-    public final boolean _closeLine;
-    public final boolean _closedContour;
 
-    public PathSegment() {
-        this(PathVerb.DONE, null, null, null, null, 0f, false, false);
+    constructor() : this(
+        verb = PathVerb.DONE,
+        p0 = null,
+        p1 = null,
+        p2 = null,
+        p3 = null,
+        conicWeight = 0f,
+        closeLine = false,
+        closedContour = false
+    )
+
+    constructor(verbOrdinal: Int, x0: Float, y0: Float, isClosedContour: Boolean) : this(
+        verb = PathVerb.values()[verbOrdinal],
+        p0 = Point(x0, y0),
+        p1 = null,
+        p2 = null,
+        p3 = null,
+        conicWeight = 0f,
+        closeLine = false,
+        closedContour = isClosedContour
+    ) {
+        require(verbOrdinal == PathVerb.MOVE.ordinal || verbOrdinal == PathVerb.CLOSE.ordinal) {
+            "Expected MOVE or CLOSE, got ${PathVerb.values()[verbOrdinal]}"
+        }
     }
 
-    public PathSegment(int verbOrdinal, float x0, float y0, boolean isClosedContour) {
-        this(PathVerb.values()[verbOrdinal], new Point(x0, y0), null, null, null, 0f, false, isClosedContour);
-        assert verbOrdinal == PathVerb.MOVE.ordinal() || verbOrdinal == PathVerb.CLOSE.ordinal() : "Expected MOVE or CLOSE, got " + PathVerb.values()[verbOrdinal];
-    }
+    constructor(x0: Float, y0: Float, x1: Float, y1: Float, isCloseLine: Boolean, isClosedContour: Boolean) : this(
+        verb = PathVerb.LINE,
+        p0 = Point(x0, y0),
+        p1 = Point(x1, y1),
+        p2 = null,
+        p3 = null,
+        conicWeight = 0f,
+        closeLine = isCloseLine,
+        closedContour = isClosedContour
+    )
 
-    public PathSegment(float x0, float y0, float x1, float y1, boolean isCloseLine, boolean isClosedContour) {
-        this(PathVerb.LINE, new Point(x0, y0), new Point(x1, y1), null, null, 0f, isCloseLine, isClosedContour);
-    }
+    constructor(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float, isClosedContour: Boolean) : this(
+        verb = PathVerb.QUAD,
+        p0 = Point(x0, y0),
+        p1 = Point(x1, y1),
+        p2 = Point(x2, y2),
+        p3 = null,
+        conicWeight = 0f,
+        closeLine = false,
+        closedContour = isClosedContour
+    )
 
-    public PathSegment(float x0, float y0, float x1, float y1, float x2, float y2, boolean isClosedContour) {
-        this(PathVerb.QUAD, new Point(x0, y0), new Point(x1, y1), new Point(x2, y2), null, 0f, false, isClosedContour);
-    }
+    constructor(
+        x0: Float,
+        y0: Float,
+        x1: Float,
+        y1: Float,
+        x2: Float,
+        y2: Float,
+        conicWeight: Float,
+        isClosedContour: Boolean
+    ) : this(
+        verb = PathVerb.CONIC,
+        p0 = Point(x0, y0),
+        p1 = Point(x1, y1),
+        p2 = Point(x2, y2),
+        p3 = null,
+        conicWeight = conicWeight,
+        closeLine = false,
+        closedContour = isClosedContour
+    )
 
-    public PathSegment(float x0, float y0, float x1, float y1, float x2, float y2, float conicWeight, boolean isClosedContour) {
-        this(PathVerb.CONIC, new Point(x0, y0), new Point(x1, y1), new Point(x2, y2), null, conicWeight, false, isClosedContour);
-    }
+    constructor(
+        x0: Float,
+        y0: Float,
+        x1: Float,
+        y1: Float,
+        x2: Float,
+        y2: Float,
+        x3: Float,
+        y3: Float,
+        isClosedContour: Boolean
+    ) : this(
+        verb = PathVerb.CUBIC,
+        p0 = Point(x0, y0),
+        p1 = Point(x1, y1),
+        p2 = Point(x2, y2),
+        p3 = Point(x3, y3),
+        conicWeight = 0f,
+        closeLine = false,
+        closedContour = isClosedContour
+    )
 
-    public PathSegment(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, boolean isClosedContour) {
-        this(PathVerb.CUBIC, new Point(x0, y0), new Point(x1, y1), new Point(x2, y2), new Point(x3, y3), 0f, false, isClosedContour);
-    }
-
-    @Override
-    public String toString() {
+    override fun toString(): String {
         return "Segment(" +
-                "verb=" + _verb +
-                (_verb != PathVerb.DONE ? ", p0=" + _p0 : "") +
-                (_verb == PathVerb.LINE || _verb == PathVerb.QUAD || _verb == PathVerb.CONIC || _verb == PathVerb.CUBIC ? ", p1=" + _p1 : "") +
-                (_verb == PathVerb.QUAD || _verb == PathVerb.CONIC || _verb == PathVerb.CUBIC ? ", p2=" + _p2 : "") +
-                (_verb == PathVerb.CUBIC ? ", p3=" + _p3 : "") +
-                (_verb == PathVerb.CONIC ? ", conicWeight=" + _conicWeight : "") +
-                (_verb == PathVerb.LINE  ? ", closeLine=" + _closeLine : "") +
-                (_verb != PathVerb.DONE ? ", closedContour=" + _closedContour : "") +
-                ")";
+                "verb=" + verb +
+                (if (verb != PathVerb.DONE) ", p0=$p0" else "") +
+                (if (verb == PathVerb.LINE || verb == PathVerb.QUAD || verb == PathVerb.CONIC || verb == PathVerb.CUBIC) ", p1=$p1" else "") +
+                (if (verb == PathVerb.QUAD || verb == PathVerb.CONIC || verb == PathVerb.CUBIC) ", p2=$p2" else "") +
+                (if (verb == PathVerb.CUBIC) ", p3=$p3" else "") +
+                (if (verb == PathVerb.CONIC) ", conicWeight=$conicWeight" else "") +
+                (if (verb == PathVerb.LINE) ", closeLine=$closeLine" else "") +
+                (if (verb != PathVerb.DONE) ", closedContour=$closedContour" else "") +
+                ")"
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        PathSegment segment = (PathSegment) o;
-        return _verb == segment._verb &&
-               (_verb != PathVerb.DONE ? Objects.equals(_p0, segment._p0) : true) &&
-               (_verb == PathVerb.LINE || _verb == PathVerb.QUAD || _verb == PathVerb.CONIC || _verb == PathVerb.CUBIC ? Objects.equals(_p1, segment._p1) : true) &&
-               (_verb == PathVerb.QUAD || _verb == PathVerb.CONIC || _verb == PathVerb.CUBIC ? Objects.equals(_p2, segment._p2) : true) &&
-               (_verb == PathVerb.CUBIC ? Objects.equals(_p3, segment._p3) : true) &&
-               (_verb == PathVerb.CONIC ? Float.compare(segment._conicWeight, _conicWeight) == 0 : true) &&
-               (_verb == PathVerb.LINE  ? _closeLine == segment._closeLine : true) &&
-               (_verb != PathVerb.DONE ? _closedContour == segment._closedContour : true);
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || javaClass != other.javaClass) return false
+        val segment = other as PathSegment
+        return verb == segment.verb &&
+                (if (verb != PathVerb.DONE) p0 == segment.p0 else true) &&
+                (if (verb == PathVerb.LINE || verb == PathVerb.QUAD || verb == PathVerb.CONIC || verb == PathVerb.CUBIC) p1 == segment.p1 else true) &&
+                (if (verb == PathVerb.QUAD || verb == PathVerb.CONIC || verb == PathVerb.CUBIC) p2 == segment.p2 else true) &&
+                (if (verb == PathVerb.CUBIC) p3 == segment.p3 else true) &&
+                (if (verb == PathVerb.CONIC) java.lang.Float.compare(
+                    segment.conicWeight,
+                    conicWeight
+                ) == 0 else true) &&
+                (if (verb == PathVerb.LINE) closeLine == segment.closeLine else true) &&
+                if (verb != PathVerb.DONE) closedContour == segment.closedContour else true
     }
 
-    @Override
-    public int hashCode() {
-        switch (_verb) {
-            case DONE:
-                return Objects.hash(_verb);
-            case MOVE:
-                return Objects.hash(_verb, _p0, _closedContour);
-            case LINE:
-                return Objects.hash(_verb, _p0, _p1, _closeLine, _closedContour);
-            case QUAD:
-                return Objects.hash(_verb, _p0, _p1, _p2, _closedContour);
-            case CONIC:
-                return Objects.hash(_verb, _p0, _p1, _p2, _conicWeight, _closedContour);
-            case CUBIC:
-                return Objects.hash(_verb, _p0, _p1, _p2, _p3, _closedContour);
-            default:
-                throw new RuntimeException("Unreachable");
+    override fun hashCode(): Int {
+        return when (verb) {
+            PathVerb.DONE -> Objects.hash(verb)
+            PathVerb.MOVE -> Objects.hash(verb, p0, closedContour)
+            PathVerb.LINE -> Objects.hash(verb, p0, p1, closeLine, closedContour)
+            PathVerb.QUAD -> Objects.hash(verb, p0, p1, p2, closedContour)
+            PathVerb.CONIC -> Objects.hash(verb, p0, p1, p2, conicWeight, closedContour)
+            PathVerb.CUBIC -> Objects.hash(verb, p0, p1, p2, p3, closedContour)
+            else -> throw RuntimeException("Unreachable")
         }
     }
 }

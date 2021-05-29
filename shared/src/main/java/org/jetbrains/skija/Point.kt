@@ -3,16 +3,16 @@ package org.jetbrains.skija
 import org.jetbrains.annotations.Contract
 
 data class Point(
-    internal val _x: Float = 0f,
-    internal val _y: Float = 0f,
+    internal val x: Float,
+    internal val y: Float,
 ) {
     fun offset(dx: Float, dy: Float): Point {
-        return Point(_x + dx, _y + dy)
+        return Point(x + dx, y + dy)
     }
 
     fun offset(vec: Point?): Point {
         requireNotNull(vec) { "Point::offset expected other != null" }
-        return offset(vec._x, vec._y)
+        return offset(vec.x, vec.y)
     }
 
     fun scale(scale: Float): Point {
@@ -20,11 +20,11 @@ data class Point(
     }
 
     fun scale(sx: Float, sy: Float): Point {
-        return Point(_x * sx, _y * sy)
+        return Point(x * sx, y * sy)
     }
 
     val isEmpty: Boolean
-        get() = _x <= 0 || _y <= 0
+        get() = x <= 0 || y <= 0
 
     companion object {
         val ZERO = Point(0f, 0f)
@@ -34,8 +34,8 @@ data class Point(
             if (pts == null) return null
             val arr = FloatArray(pts.size * 2)
             for (i in pts.indices) {
-                arr[i * 2] = pts[i]._x
-                arr[i * 2 + 1] = pts[i]._y
+                arr[i * 2] = pts[i].x
+                arr[i * 2 + 1] = pts[i].y
             }
             return arr
         }

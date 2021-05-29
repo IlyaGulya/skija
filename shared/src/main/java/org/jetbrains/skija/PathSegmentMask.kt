@@ -1,8 +1,10 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-public interface PathSegmentMask {
-    int LINE  = 0b0001;
-    int QUAD  = 0b0010;
-    int CONIC = 0b0100;
-    int CUBIC = 0b1000;
+interface PathSegmentMask {
+    companion object {
+        const val LINE = 1
+        const val QUAD = 2
+        const val CONIC = 4
+        const val CUBIC = 8
+    }
 }

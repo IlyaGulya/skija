@@ -12,11 +12,11 @@ class Shader internal constructor(
     companion object {
         // Linear
         fun makeLinearGradient(p0: Point, p1: Point, colors: IntArray): Shader {
-            return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors)
+            return makeLinearGradient(p0.x, p0.y, p1.x, p1.y, colors)
         }
 
         fun makeLinearGradient(p0: Point, p1: Point, colors: IntArray, positions: FloatArray?): Shader {
-            return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors, positions)
+            return makeLinearGradient(p0.x, p0.y, p1.x, p1.y, colors, positions)
         }
 
         fun makeLinearGradient(
@@ -26,7 +26,7 @@ class Shader internal constructor(
             positions: FloatArray?,
             style: GradientStyle
         ): Shader {
-            return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors, positions, style)
+            return makeLinearGradient(p0.x, p0.y, p1.x, p1.y, colors, positions, style)
         }
 
         @JvmOverloads
@@ -64,7 +64,7 @@ class Shader internal constructor(
             positions: FloatArray?,
             style: GradientStyle
         ): Shader {
-            return makeLinearGradient(p0._x, p0._y, p1._x, p1._y, colors, cs, positions, style)
+            return makeLinearGradient(p0.x, p0.y, p1.x, p1.y, colors, cs, positions, style)
         }
 
         fun makeLinearGradient(
@@ -102,11 +102,11 @@ class Shader internal constructor(
 
         // Radial
         fun makeRadialGradient(center: Point, r: Float, colors: IntArray): Shader {
-            return makeRadialGradient(center._x, center._y, r, colors)
+            return makeRadialGradient(center.x, center.y, r, colors)
         }
 
         fun makeRadialGradient(center: Point, r: Float, colors: IntArray, positions: FloatArray?): Shader {
-            return makeRadialGradient(center._x, center._y, r, colors, positions)
+            return makeRadialGradient(center.x, center.y, r, colors, positions)
         }
 
         fun makeRadialGradient(
@@ -116,7 +116,7 @@ class Shader internal constructor(
             positions: FloatArray?,
             style: GradientStyle
         ): Shader {
-            return makeRadialGradient(center._x, center._y, r, colors, positions, style)
+            return makeRadialGradient(center.x, center.y, r, colors, positions, style)
         }
 
         @JvmOverloads
@@ -153,7 +153,7 @@ class Shader internal constructor(
             positions: FloatArray?,
             style: GradientStyle
         ): Shader {
-            return makeRadialGradient(center._x, center._y, r, colors, cs, positions, style)
+            return makeRadialGradient(center.x, center.y, r, colors, cs, positions, style)
         }
 
         fun makeRadialGradient(
@@ -189,7 +189,7 @@ class Shader internal constructor(
 
         // Two-point Conical
         fun makeTwoPointConicalGradient(p0: Point, r0: Float, p1: Point, r1: Float, colors: IntArray): Shader {
-            return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors)
+            return makeTwoPointConicalGradient(p0.x, p0.y, r0, p1.x, p1.y, r1, colors)
         }
 
         fun makeTwoPointConicalGradient(
@@ -200,7 +200,7 @@ class Shader internal constructor(
             colors: IntArray,
             positions: FloatArray?
         ): Shader {
-            return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors, positions)
+            return makeTwoPointConicalGradient(p0.x, p0.y, r0, p1.x, p1.y, r1, colors, positions)
         }
 
         fun makeTwoPointConicalGradient(
@@ -212,7 +212,7 @@ class Shader internal constructor(
             positions: FloatArray?,
             style: GradientStyle
         ): Shader {
-            return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors, positions, style)
+            return makeTwoPointConicalGradient(p0.x, p0.y, r0, p1.x, p1.y, r1, colors, positions, style)
         }
 
         @JvmOverloads
@@ -257,7 +257,7 @@ class Shader internal constructor(
             positions: FloatArray?,
             style: GradientStyle
         ): Shader {
-            return makeTwoPointConicalGradient(p0._x, p0._y, r0, p1._x, p1._y, r1, colors, cs, positions, style)
+            return makeTwoPointConicalGradient(p0.x, p0.y, r0, p1.x, p1.y, r1, colors, cs, positions, style)
         }
 
         fun makeTwoPointConicalGradient(
@@ -299,7 +299,7 @@ class Shader internal constructor(
 
         // Sweep
         fun makeSweepGradient(center: Point, colors: IntArray): Shader {
-            return makeSweepGradient(center._x, center._y, colors)
+            return makeSweepGradient(center.x, center.y, colors)
         }
 
         fun makeSweepGradient(x: Float, y: Float, colors: IntArray): Shader {
@@ -307,7 +307,7 @@ class Shader internal constructor(
         }
 
         fun makeSweepGradient(center: Point, colors: IntArray, positions: FloatArray?): Shader {
-            return makeSweepGradient(center._x, center._y, colors, positions)
+            return makeSweepGradient(center.x, center.y, colors, positions)
         }
 
         fun makeSweepGradient(x: Float, y: Float, colors: IntArray, positions: FloatArray?): Shader {
@@ -315,7 +315,7 @@ class Shader internal constructor(
         }
 
         fun makeSweepGradient(center: Point, colors: IntArray, positions: FloatArray?, style: GradientStyle): Shader {
-            return makeSweepGradient(center._x, center._y, colors, positions, style)
+            return makeSweepGradient(center.x, center.y, colors, positions, style)
         }
 
         fun makeSweepGradient(
@@ -336,7 +336,7 @@ class Shader internal constructor(
             positions: FloatArray?,
             style: GradientStyle
         ): Shader {
-            return makeSweepGradient(center._x, center._y, startAngle, endAngle, colors, positions, style)
+            return makeSweepGradient(center.x, center.y, startAngle, endAngle, colors, positions, style)
         }
 
         fun makeSweepGradient(
@@ -375,7 +375,7 @@ class Shader internal constructor(
             positions: FloatArray?,
             style: GradientStyle
         ): Shader {
-            return makeSweepGradient(center._x, center._y, startAngle, endAngle, colors, cs, positions, style)
+            return makeSweepGradient(center.x, center.y, startAngle, endAngle, colors, cs, positions, style)
         }
 
         fun makeSweepGradient(

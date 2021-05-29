@@ -43,8 +43,8 @@ class TextBlob @Internal constructor(ptr: Long) : Managed(ptr, _FinalizerHolder.
                 assert(glyphs.size == pos.size) { "glyphs.length " + glyphs.size + " != pos.length " + pos.size }
                 val floatPos = FloatArray(pos.size * 2)
                 for (i in pos.indices) {
-                    floatPos[i * 2] = pos[i]._x
-                    floatPos[i * 2 + 1] = pos[i]._y
+                    floatPos[i * 2] = pos[i].x
+                    floatPos[i * 2 + 1] = pos[i].y
                 }
                 Stats.onNativeCall()
                 val ptr = _nMakeFromPos(glyphs, floatPos, getPtr(font))

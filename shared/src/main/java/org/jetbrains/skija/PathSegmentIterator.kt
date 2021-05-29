@@ -1,59 +1,57 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import java.lang.ref.*;
-import java.util.*;
-import org.jetbrains.annotations.*;
-import org.jetbrains.skija.impl.*;
+import org.jetbrains.skija.impl.Library
+import org.jetbrains.skija.impl.Managed
+import org.jetbrains.skija.impl.Stats
+import java.lang.ref.Reference
 
-@ApiStatus.Internal
-public class PathSegmentIterator extends Managed implements Iterator<PathSegment> {
-    static { Library.staticLoad(); }
-    
-    public final Path _path;
-    public PathSegment _nextSegment;
+class PathSegmentIterator constructor(
+    val path: Path?,
+    ptr: Long,
+) : Managed(ptr, _nGetFinalizer()),
+    Iterator<PathSegment?> {
+    companion object {
+        fun make(path: Path?, forceClose: Boolean): PathSegmentIterator {
+            return try {
+                val ptr = _nMake(getPtr(path), forceClose)
+                val i = PathSegmentIterator(path, ptr)
+                i.nextSegment = _nNext(ptr)
+                i
+            } finally {
+                Reference.reachabilityFence(path)
+            }
+        }
 
-    @Override
-    public PathSegment next() {
-        try {
-            if (_nextSegment._verb == PathVerb.DONE)
-                throw new NoSuchElementException();
-            PathSegment res = _nextSegment;
-            _nextSegment = _nNext(_ptr);
-            return res;
-        } finally {
-            Reference.reachabilityFence(this);
+        external fun _nMake(pathPtr: Long, forceClose: Boolean): Long
+        external fun _nGetFinalizer(): Long
+        external fun _nNext(ptr: Long): PathSegment?
+
+        init {
+            Library.staticLoad()
         }
     }
 
-    @Override
-    public boolean hasNext() {
-        return _nextSegment._verb != PathVerb.DONE;
-    }
-
-    @ApiStatus.Internal
-    public PathSegmentIterator(Path path, long ptr) {
-        super(ptr, _nGetFinalizer());
-        this._path = path;
-        Stats.onNativeCall();
-    }
-
-    public static PathSegmentIterator make(Path path, boolean forceClose) {
-        try {
-            long ptr = _nMake(Native.getPtr(path), forceClose);
-            PathSegmentIterator i = new PathSegmentIterator(path, ptr);
-            i._nextSegment = _nNext(ptr);
-            return i;
+    var nextSegment: PathSegment? = null
+    override fun next(): PathSegment? {
+        return try {
+            if (nextSegment!!.verb == PathVerb.DONE) throw NoSuchElementException()
+            val res = nextSegment
+            nextSegment = _nNext(ptr)
+            res
         } finally {
-            Reference.reachabilityFence(path);
+            Reference.reachabilityFence(this)
         }
     }
 
-    @ApiStatus.Internal
-    public static class _FinalizerHolder {
-        public static final long PTR = _nGetFinalizer();
+    override fun hasNext(): Boolean {
+        return nextSegment!!.verb != PathVerb.DONE
     }
 
-    public static native long _nMake(long pathPtr, boolean forceClose);
-    public static native long _nGetFinalizer();
-    public static native PathSegment _nNext(long ptr);
+    internal object _FinalizerHolder {
+        val PTR = _nGetFinalizer()
+    }
+
+    init {
+        Stats.onNativeCall()
+    }
 }
