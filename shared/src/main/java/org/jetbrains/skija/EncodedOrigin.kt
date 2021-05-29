@@ -1,9 +1,6 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import org.jetbrains.annotations.*;
-
-public enum EncodedOrigin {
-    @ApiStatus.Internal
+enum class EncodedOrigin {
     _UNUSED,
 
     /**
@@ -51,34 +48,17 @@ public enum EncodedOrigin {
      * that transforms the source rectangle with upper left corner at [0, 0] and origin to a correctly
      * oriented destination rectangle of [0, 0, w, h].
      */
-    public Matrix33 toMatrix(int w, int h) {
-        switch (this) {
-            case TOP_LEFT:
-                return Matrix33.IDENTITY;
-
-            case TOP_RIGHT:
-                return new Matrix33(-1,  0, w,  0,  1, 0, 0, 0, 1);
-
-            case BOTTOM_RIGHT:
-                return new Matrix33(-1,  0, w,  0, -1, h, 0, 0, 1);
-
-            case BOTTOM_LEFT:
-                return new Matrix33( 1,  0, 0,  0, -1, h, 0, 0, 1);
-
-            case LEFT_TOP:
-                return new Matrix33( 0,  1, 0,  1,  0, 0, 0, 0, 1);
-
-            case RIGHT_TOP:
-                return new Matrix33( 0, -1, w,  1,  0, 0, 0, 0, 1);
-
-            case RIGHT_BOTTOM:
-                return new Matrix33( 0, -1, w, -1,  0, h, 0, 0, 1);
-
-            case LEFT_BOTTOM:
-                return new Matrix33( 0,  1, 0, -1,  0, h, 0, 0, 1);
-
-            default:
-                throw new IllegalArgumentException("Unsupported origin " + this);
+    fun toMatrix(w: Int, h: Int): Matrix33 {
+        return when (this) {
+            TOP_LEFT -> Matrix33.Companion.IDENTITY
+            TOP_RIGHT -> Matrix33(-1f, 0f, w.toFloat(), 0f, 1f, 0f, 0f, 0f, 1f)
+            BOTTOM_RIGHT -> Matrix33(-1f, 0f, w.toFloat(), 0f, -1f, h.toFloat(), 0f, 0f, 1f)
+            BOTTOM_LEFT -> Matrix33(1f, 0f, 0f, 0f, -1f, h.toFloat(), 0f, 0f, 1f)
+            LEFT_TOP -> Matrix33(0f, 1f, 0f, 1f, 0f, 0f, 0f, 0f, 1f)
+            RIGHT_TOP -> Matrix33(0f, -1f, w.toFloat(), 1f, 0f, 0f, 0f, 0f, 1f)
+            RIGHT_BOTTOM -> Matrix33(0f, -1f, w.toFloat(), -1f, 0f, h.toFloat(), 0f, 0f, 1f)
+            LEFT_BOTTOM -> Matrix33(0f, 1f, 0f, -1f, 0f, h.toFloat(), 0f, 0f, 1f)
+            else -> throw IllegalArgumentException("Unsupported origin $this")
         }
     }
 
@@ -86,15 +66,10 @@ public enum EncodedOrigin {
      * Return true if the encoded origin includes a 90 degree rotation, in which case the width
      * and height of the source data are swapped relative to a correctly oriented destination.
      */
-    public boolean swapsWidthHeight() {
-        switch (this) {
-            case LEFT_TOP:
-            case RIGHT_TOP:
-            case RIGHT_BOTTOM:
-            case LEFT_BOTTOM:
-                return true;
-            default:
-                return false;
+    fun swapsWidthHeight(): Boolean {
+        return when (this) {
+            LEFT_TOP, RIGHT_TOP, RIGHT_BOTTOM, LEFT_BOTTOM -> true
+            else -> false
         }
     }
 }

@@ -1,12 +1,15 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-public enum FilterQuality {
-    /** fastest but lowest quality, typically nearest-neighbor */
+enum class FilterQuality {
+    /** fastest but lowest quality, typically nearest-neighbor  */
     NONE,
-    /** typically bilerp */
+
+    /** typically bilerp  */
     LOW,
-    /** typically bilerp + mipmaps for down-scaling */
+
+    /** typically bilerp + mipmaps for down-scaling  */
     MEDIUM,
-    /** slowest but highest quality, typically bicubic or bett */
+
+    /** slowest but highest quality, typically bicubic or bett  */
     HIGH
 }

@@ -1,6 +1,6 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-public enum EncodedImageFormat {
+enum class EncodedImageFormat {
     BMP,
     GIF,
     ICO,
@@ -12,5 +12,5 @@ public enum EncodedImageFormat {
     KTX,
     ASTC,
     DNG,
-    HEIF
+    HEIF,
 }

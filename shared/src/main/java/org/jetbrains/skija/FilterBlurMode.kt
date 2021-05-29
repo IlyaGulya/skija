@@ -1,12 +1,15 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-public enum FilterBlurMode {
-    /** fuzzy inside and outside */
+enum class FilterBlurMode {
+    /** fuzzy inside and outside  */
     NORMAL,
-    /** solid inside, fuzzy outside */
+
+    /** solid inside, fuzzy outside  */
     SOLID,
-    /** nothing inside, fuzzy outside */
+
+    /** nothing inside, fuzzy outside  */
     OUTER,
-    /** fuzzy inside, nothing outside */
+
+    /** fuzzy inside, nothing outside  */
     INNER
 }
