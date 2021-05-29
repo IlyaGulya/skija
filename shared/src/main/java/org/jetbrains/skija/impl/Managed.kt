@@ -1,64 +1,57 @@
-package org.jetbrains.skija.impl;
+package org.jetbrains.skija.impl
 
-import org.jetbrains.annotations.*;
-import java.lang.ref.*;
+import java.lang.ref.Cleaner
+import java.lang.ref.Cleaner.Cleanable
 
-public abstract class Managed extends Native implements AutoCloseable {
-    @ApiStatus.Internal
-    public Cleaner.Cleanable _cleanable;
-
-    public Managed(long ptr, long finalizer) {
-        this(ptr, finalizer, true);
+abstract class Managed @JvmOverloads constructor(
+    ptr: Long,
+    finalizer: Long,
+    managed: Boolean = true
+) : Native(ptr),
+    AutoCloseable {
+    internal var _cleanable: Cleanable? = null
+    override fun close() {
+        when {
+            0L == ptr -> throw RuntimeException("Object already closed: $javaClass, ptr=$ptr")
+            null == _cleanable -> throw RuntimeException(
+                "Object is not managed in JVM, can't close(): $javaClass, ptr=$ptr"
+            )
+            else -> {
+                _cleanable!!.clean()
+                _cleanable = null
+                ptr = 0
+            }
+        }
     }
 
-    public Managed(long ptr, long finalizer, boolean managed) {
-        super(ptr);
+    open val isClosed: Boolean
+        get() = ptr == 0L
+
+    class CleanerThunk(
+        var _className: String,
+        var ptr: Long,
+        var _finalizerPtr: Long
+    ) : Runnable {
+        override fun run() {
+            Log.trace { "Cleaning " + _className + " " + ptr.toString(16) }
+            Stats.onDeallocated(_className)
+            Stats.onNativeCall()
+            _nInvokeFinalizer(_finalizerPtr, ptr)
+        }
+    }
+
+    companion object {
+        var _cleaner = Cleaner.create()
+        external fun _nInvokeFinalizer(finalizer: Long, ptr: Long)
+    }
+
+    init {
         if (managed) {
-            assert ptr != 0 : "Managed ptr is 0";
-            assert finalizer != 0 : "Managed finalizer is 0";
-            String className = getClass().getSimpleName();
-            Stats.onAllocated(className);
-            this._cleanable = _cleaner.register(this, new CleanerThunk(className, ptr, finalizer));
+            assert(ptr != 0L) { "Managed ptr is 0" }
+            assert(finalizer != 0L) { "Managed finalizer is 0" }
+            val className = javaClass.simpleName
+            Stats.onAllocated(className)
+            _cleanable = _cleaner.register(this, CleanerThunk(className, ptr, finalizer))
         }
     }
-
-    @Override
-    public void close() {
-        if (0 == _ptr)
-            throw new RuntimeException("Object already closed: " + getClass() + ", _ptr=" + _ptr);
-        else if (null == _cleanable)
-            throw new RuntimeException("Object is not managed in JVM, can't close(): " + getClass() + ", _ptr=" + _ptr);
-        else {
-            _cleanable.clean();
-            _cleanable = null;
-            _ptr = 0;
-        }
-    }
-
-    public boolean isClosed() {
-        return _ptr == 0;
-    }
-
-    public static Cleaner _cleaner = Cleaner.create();
-
-    public static class CleanerThunk implements Runnable {
-        public String _className;
-        public long _ptr;
-        public long _finalizerPtr;
-
-        public CleanerThunk(String className, long ptr, long finalizer) {
-            this._className = className;
-            this._ptr = ptr;
-            this._finalizerPtr = finalizer;
-        }
-
-        public void run() {
-            Log.trace(() -> "Cleaning " + _className + " " + Long.toString(_ptr, 16));
-            Stats.onDeallocated(_className);
-            Stats.onNativeCall();
-            _nInvokeFinalizer(_finalizerPtr, _ptr);
-        }
-    }
-
-    public static native void _nInvokeFinalizer(long finalizer, long ptr);
 }

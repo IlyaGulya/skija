@@ -3,7 +3,7 @@ package org.jetbrains.skija.impl
 import java.lang.ref.Reference
 
 abstract class Native(
-    val ptr: Long
+    var ptr: Long
 ) {
     init {
         require(ptr != 0L) { "Can't wrap nullptr" }
