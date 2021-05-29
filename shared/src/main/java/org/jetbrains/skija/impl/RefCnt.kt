@@ -1,37 +1,30 @@
-package org.jetbrains.skija.impl;
+package org.jetbrains.skija.impl
 
-import java.lang.ref.*;
-import org.jetbrains.annotations.*;
+import java.lang.ref.Reference
 
-public abstract class RefCnt extends Managed {
-    protected RefCnt(long ptr) {
-        super(ptr, _FinalizerHolder.PTR);
-    }
+abstract class RefCnt : Managed {
+    protected constructor(ptr: Long) : super(ptr, _FinalizerHolder.PTR)
+    protected constructor(ptr: Long, allowClose: Boolean) : super(ptr, _FinalizerHolder.PTR, allowClose)
 
-    protected RefCnt(long ptr, boolean allowClose) {
-        super(ptr, _FinalizerHolder.PTR, allowClose);
-    }
-
-    public int getRefCount() {
-        try {
-            Stats.onNativeCall();
-            return _nGetRefCount(_ptr);
+    val refCount: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGetRefCount(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
+
+    override fun toString(): String {
+        val s = super.toString()
+        return s.substring(0, s.length - 1) + ", refCount=" + refCount + ")"
     }
 
-    @Override
-    public String toString() {
-        String s = super.toString();
-        return s.substring(0, s.length() - 1) + ", refCount=" + getRefCount() + ")";
+    internal object _FinalizerHolder {
+        val PTR = _nGetFinalizer()
     }
 
-    @ApiStatus.Internal
-    public static class _FinalizerHolder {
-        public static final long PTR = _nGetFinalizer();
+    companion object {
+        external fun _nGetFinalizer(): Long
+        external fun _nGetRefCount(ptr: Long): Int
     }
-
-    public static native long _nGetFinalizer();
-    public static native int  _nGetRefCount(long ptr);
 }
