@@ -1,98 +1,87 @@
-package org.jetbrains.skija.impl;
+package org.jetbrains.skija.impl
 
-import java.io.*;
-import java.net.*;
-import java.nio.file.*;
-import java.util.*;
-import lombok.*;
-import org.jetbrains.annotations.*;
+import lombok.SneakyThrows
+import java.io.File
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
-public class Library {
-    @ApiStatus.Internal
-    public static volatile boolean _loaded = false;
-
-    public static void staticLoad() {
-        if (!_loaded && !"false".equals(System.getProperty("skija.staticLoad")))
-            load();
+object Library {
+    internal @Volatile
+    var _loaded = false
+    fun staticLoad() {
+        if (!_loaded && "false" != System.getProperty("skija.staticLoad")) load()
     }
 
-    public static String readResource(String path) {
-        URL url = Library.class.getResource(path);
-        if (url == null)
-            return null;
-        try (InputStream is = url.openStream()) {
-            byte[] bytes = is.readAllBytes();
-            return new String(bytes).trim();
-        } catch (IOException e) {
-            return null;
+    fun readResource(path: String?): String? {
+        val url = Library::class.java.getResource(path) ?: return null
+        try {
+            url.openStream().use { `is` ->
+                val bytes = `is`.readAllBytes()
+                return String(bytes).trim { it <= ' ' }
+            }
+        } catch (e: IOException) {
+            return null
         }
     }
 
-    public static synchronized void load() {
-        if (_loaded) return;
-
-        String version = readResource("/skija.version");
-        File tempDir = new File(System.getProperty("java.io.tmpdir"), "skija_" + (version == null ? "" + System.nanoTime() : version));
-        String os = System.getProperty("os.name").toLowerCase();
-        
+    @Synchronized
+    fun load() {
+        if (_loaded) return
+        val version = readResource("/skija.version")
+        val tempDir = File(System.getProperty("java.io.tmpdir"), "skija_" + (version ?: "" + System.nanoTime()))
+        val os = System.getProperty("os.name").toLowerCase()
         if (os.contains("mac") || os.contains("darwin")) {
-            String file = "aarch64".equals(System.getProperty("os.arch")) ? "libskija_arm64.dylib" : "libskija_x64.dylib";
-            File library = _extract("/", file, tempDir);
-            System.load(library.getAbsolutePath());
+            val file = if ("aarch64" == System.getProperty("os.arch")) "libskija_arm64.dylib" else "libskija_x64.dylib"
+            val library = _extract("/", file, tempDir)
+            System.load(library.absolutePath)
         } else if (os.contains("windows")) {
-            _extract("/", "icudtl.dat", tempDir);
-            File library = _extract("/", "skija.dll", tempDir);
-            System.load(library.getAbsolutePath());
+            _extract("/", "icudtl.dat", tempDir)
+            val library = _extract("/", "skija.dll", tempDir)
+            System.load(library.absolutePath)
         } else if (os.contains("nux") || os.contains("nix")) {
-            File library = _extract("/", "libskija.so", tempDir);
-            System.load(library.getAbsolutePath());
-        } else
-            throw new RuntimeException("Unknown operation system");
-
+            val library = _extract("/", "libskija.so", tempDir)
+            System.load(library.absolutePath)
+        } else throw RuntimeException("Unknown operation system")
         if (tempDir.exists() && version == null) {
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            Runtime.getRuntime().addShutdownHook(Thread {
                 try {
                     Files.walk(tempDir.toPath())
-                         .map(Path::toFile)
-                         .sorted(Comparator.reverseOrder())
-                         .forEach((f) -> {
-                            Log.debug("Deleting " + f);
-                            f.delete();
-                         });
-                } catch (IOException ex) {
-                    ex.printStackTrace();
+                        .map { obj: Path -> obj.toFile() }
+                        .sorted(Comparator.reverseOrder())
+                        .forEach { f: File ->
+                            Log.debug("Deleting $f")
+                            f.delete()
+                        }
+                } catch (ex: IOException) {
+                    ex.printStackTrace()
                 }
-            }));
+            })
         }
-        
-        _loaded = true;
-        _nAfterLoad();
+        _loaded = true
+        _nAfterLoad()
     }
 
-    @ApiStatus.Internal
-    @SneakyThrows
-    public static File _extract(String resourcePath, String fileName, File tempDir) {
-        File file;
-        URL url = Library.class.getResource(resourcePath + fileName);
+    internal @SneakyThrows
+    fun _extract(resourcePath: String, fileName: String, tempDir: File): File {
+        val file: File
+        val url = Library::class.java.getResource(resourcePath + fileName)
         if (url == null) {
-            file = new File(fileName);
-            if (!file.exists())
-                throw new IllegalArgumentException("Library file " + fileName + " not found in " + resourcePath);
-        } else if (url.getProtocol() == "file") {
-            file = new File(url.toURI());
+            file = File(fileName)
+            require(file.exists()) { "Library file $fileName not found in $resourcePath" }
+        } else if (url.protocol === "file") {
+            file = File(url.toURI())
         } else {
-            file = new File(tempDir, fileName);
+            file = File(tempDir, fileName)
             if (!file.exists()) {
-                if (!tempDir.exists())
-                    tempDir.mkdirs();
-                try (InputStream is = url.openStream()) {
-                    Files.copy(is, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                }
+                if (!tempDir.exists()) tempDir.mkdirs()
+                url.openStream().use { `is` -> Files.copy(`is`, file.toPath(), StandardCopyOption.REPLACE_EXISTING) }
             }
         }
-        Log.debug("Loading " + file);
-        return file;
+        Log.debug("Loading $file")
+        return file
     }
 
-    @ApiStatus.Internal public static native void _nAfterLoad();
+    internal external fun _nAfterLoad()
 }
