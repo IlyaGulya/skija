@@ -1,55 +1,45 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import lombok.EqualsAndHashCode;
-import org.jetbrains.annotations.*;
+data class FontStyle(
+    val value: Int,
+) {
 
-@EqualsAndHashCode
-public class FontStyle {
-    public final int _value;
+    constructor(weight: Int, width: Int, slant: FontSlant) : this(
+        value = weight and 0xFFFF or (width and 0xFF shl 16) or (slant.ordinal shl 24)
+    )
 
-    public static final FontStyle NORMAL = new FontStyle(FontWeight.NORMAL, FontWidth.NORMAL, FontSlant.UPRIGHT);
-    public static final FontStyle BOLD = new FontStyle(FontWeight.BOLD, FontWidth.NORMAL, FontSlant.UPRIGHT);
-    public static final FontStyle ITALIC = new FontStyle(FontWeight.NORMAL, FontWidth.NORMAL, FontSlant.ITALIC);
-    public static final FontStyle BOLD_ITALIC = new FontStyle(FontWeight.BOLD, FontWidth.NORMAL, FontSlant.ITALIC);
+    val weight: Int
+        get() = value and 0xFFFF
 
-    public FontStyle(int weight, int width, FontSlant slant) {
-        _value = (weight & 0xFFFF) | ((width & 0xFF) << 16) | (slant.ordinal() << 24);
+    fun withWeight(weight: Int): FontStyle {
+        return FontStyle(weight, width, slant)
     }
 
-    @ApiStatus.Internal
-    public FontStyle(int value) {
-        this._value = value;
+    val width: Int
+        get() = value shr 16 and 0xFF
+
+    fun withWidth(width: Int): FontStyle {
+        return FontStyle(weight, width, slant)
     }
 
-    public int getWeight() {
-        return _value & 0xFFFF;
+    val slant: FontSlant
+        get() = FontSlant.values()[value shr 24 and 0xFF]
+
+    fun withSlant(slant: FontSlant): FontStyle {
+        return FontStyle(weight, width, slant)
     }
 
-    public FontStyle withWeight(int weight) {
-        return new FontStyle(weight, getWidth(), getSlant());
-    }
-
-    public int getWidth() {
-        return (_value >> 16) & 0xFF;
-    }
-
-    public FontStyle withWidth(int width) {
-        return new FontStyle(getWeight(), width, getSlant());
-    }
-
-    public FontSlant getSlant() {
-        return FontSlant.values()[(_value >> 24) & 0xFF];
-    }
-
-    public FontStyle withSlant(FontSlant slant) {
-        return new FontStyle(getWeight(), getWidth(), slant);
-    }
-
-    @Override
-    public String toString() {
+    override fun toString(): String {
         return "FontStyle(" +
-                "weight=" + getWeight() +
-                ", width=" + getWidth() +
-                ", slant='" + getSlant() + ')';
+                "weight=" + weight +
+                ", width=" + width +
+                ", slant='" + slant + ')'
+    }
+
+    companion object {
+        val NORMAL = FontStyle(FontWeight.NORMAL, FontWidth.NORMAL, FontSlant.UPRIGHT)
+        val BOLD = FontStyle(FontWeight.BOLD, FontWidth.NORMAL, FontSlant.UPRIGHT)
+        val ITALIC = FontStyle(FontWeight.NORMAL, FontWidth.NORMAL, FontSlant.ITALIC)
+        val BOLD_ITALIC = FontStyle(FontWeight.BOLD, FontWidth.NORMAL, FontSlant.ITALIC)
     }
 }

@@ -1,42 +1,64 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import java.lang.ref.*;
-import org.jetbrains.annotations.*;
-import org.jetbrains.skija.impl.*;
+import org.jetbrains.skija.impl.Library
+import org.jetbrains.skija.impl.RefCnt
+import org.jetbrains.skija.impl.Stats
+import java.lang.ref.Reference
 
-public class FontMgr extends RefCnt {
-    static { Library.staticLoad(); }
-    
-    public int getFamiliesCount() {
-        try {
-            Stats.onNativeCall();
-            return _nGetFamiliesCount(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
+@Suppress("MemberVisibilityCanBePrivate", "unused")
+open class FontMgr : RefCnt {
+    @Suppress("FunctionName", "MemberVisibilityCanBePrivate")
+    companion object {
+        external fun _nGetFamiliesCount(ptr: Long): Int
+        external fun _nGetFamilyName(ptr: Long, index: Int): String
+        external fun _nMakeStyleSet(ptr: Long, index: Int): Long
+        external fun _nMatchFamily(ptr: Long, familyName: String?): Long
+        external fun _nMatchFamilyStyle(ptr: Long, familyName: String?, fontStyle: Int): Long
+        external fun _nMatchFamilyStyleCharacter(
+            ptr: Long,
+            familyName: String?,
+            fontStyle: Int,
+            bcp47: Array<String?>?,
+            character: Int
+        ): Long
+
+        external fun _nMakeFromData(ptr: Long, dataPtr: Long, ttcIndex: Int): Long
+        external fun _nDefault(): Long
+
+        init {
+            Library.staticLoad()
         }
     }
 
-    public String getFamilyName(int index) {
-        try {
-            Stats.onNativeCall();
-            return _nGetFamilyName(_ptr, index);
+    val familiesCount: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGetFamiliesCount(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
+        }
+
+    fun getFamilyName(index: Int): String {
+        return try {
+            Stats.onNativeCall()
+            _nGetFamilyName(ptr, index)
+        } finally {
+            Reference.reachabilityFence(this)
         }
     }
 
-    public FontStyleSet makeStyleSet(int index) {
-        try {
-            Stats.onNativeCall();
-            long ptr = _nMakeStyleSet(_ptr, index);
-            return ptr == 0 ? null : new FontStyleSet(ptr);
+    fun makeStyleSet(index: Int): FontStyleSet? {
+        return try {
+            Stats.onNativeCall()
+            val ptr = _nMakeStyleSet(ptr, index)
+            if (ptr == 0L) null else FontStyleSet(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
-     * The caller must call {@link #close()} on the returned object.
+     * The caller must call [.close] on the returned object.
      * Never returns null; will return an empty set if the name is not found.
      *
      * Passing null as the parameter will return the default system family.
@@ -44,48 +66,45 @@ public class FontMgr extends RefCnt {
      * result in the empty set.
      *
      * It is possible that this will return a style set not accessible from
-     * {@link #makeStyleSet(int)} due to hidden or auto-activated fonts.
+     * [.makeStyleSet] due to hidden or auto-activated fonts.
      */
-    public FontStyleSet matchFamily(String familyName) {
-        try {
-            Stats.onNativeCall();
-            return new FontStyleSet(_nMatchFamily(_ptr, familyName));
+    fun matchFamily(familyName: String?): FontStyleSet {
+        return try {
+            Stats.onNativeCall()
+            FontStyleSet(_nMatchFamily(ptr, familyName))
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
      * Find the closest matching typeface to the specified familyName and style
-     * and return a ref to it. The caller must call {@link #close()} on the returned
+     * and return a ref to it. The caller must call [.close] on the returned
      * object. Will return null if no 'good' match is found.
      *
      * Passing null as the parameter for `familyName` will return the
      * default system font.
      *
      * It is possible that this will return a style set not accessible from
-     * {@link #makeStyleSet(int)} or {@link #matchFamily(String)} due to hidden or
+     * [.makeStyleSet] or [.matchFamily] due to hidden or
      * auto-activated fonts.
      */
-    @Nullable
-    public Typeface matchFamilyStyle(String familyName, FontStyle style) {
-        try {
-            Stats.onNativeCall();
-            long ptr = _nMatchFamilyStyle(_ptr, familyName, style._value);
-            return ptr == 0 ? null : new Typeface(ptr);
+    fun matchFamilyStyle(familyName: String?, style: FontStyle): Typeface? {
+        return try {
+            Stats.onNativeCall()
+            val ptr = _nMatchFamilyStyle(ptr, familyName, style.value)
+            if (ptr == 0L) null else Typeface(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
-    @Nullable
-    public Typeface matchFamiliesStyle(String[] families, FontStyle style) {
-        for (String family: families) {
-            var typeface = matchFamilyStyle(family, style);
-            if (typeface != null)
-                return typeface;
+    fun matchFamiliesStyle(families: Array<String?>, style: FontStyle): Typeface? {
+        for (family in families) {
+            val typeface = matchFamilyStyle(family, style)
+            if (typeface != null) return typeface
         }
-        return null;
+        return null
     }
 
     /**
@@ -103,74 +122,64 @@ public class FontMgr extends RefCnt {
      * most significant. If no specified bcp47 codes match, any font with the
      * requested character will be matched.
      */
-    public Typeface matchFamilyStyleCharacter(@Nullable String familyName, FontStyle style, @Nullable String[] bcp47, int character) {
-        try {
-            Stats.onNativeCall();
-            long ptr = _nMatchFamilyStyleCharacter(_ptr, familyName, style._value, bcp47, character);
-            return ptr == 0 ? null : new Typeface(ptr);
+    fun matchFamilyStyleCharacter(
+        familyName: String?,
+        style: FontStyle,
+        bcp47: Array<String?>?,
+        character: Int
+    ): Typeface? {
+        return try {
+            Stats.onNativeCall()
+            val ptr = _nMatchFamilyStyleCharacter(ptr, familyName, style.value, bcp47, character)
+            if (ptr == 0L) null else Typeface(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
-    @Nullable
-    public Typeface matchFamiliesStyleCharacter(String[] families, FontStyle style, @Nullable String[] bcp47, int character) {
-        for (String family: families) {
-            var typeface = matchFamilyStyleCharacter(family, style, bcp47, character);
-            if (typeface != null)
-                return typeface;
+    fun matchFamiliesStyleCharacter(
+        families: Array<String?>,
+        style: FontStyle,
+        bcp47: Array<String?>?,
+        character: Int
+    ): Typeface? {
+        for (family in families) {
+            val typeface = matchFamilyStyleCharacter(family, style, bcp47, character)
+            if (typeface != null) return typeface
         }
-        return null;
+        return null
     }
 
     /**
      * Create a typeface for the specified data and TTC index (pass 0 for none)
-     * or null if the data is not recognized. The caller must call {@link #close()} on
+     * or null if the data is not recognized. The caller must call [.close] on
      * the returned object if it is not null.
      */
-    public Typeface makeFromData(Data data) {
-        return makeFromData(data, 0);
-    }
-
-    public Typeface makeFromData(Data data, int ttcIndex) {
-        try {
-            Stats.onNativeCall();
-            long ptr = _nMakeFromData(_ptr, Native.getPtr(data), ttcIndex);
-            return ptr == 0 ? null : new Typeface(ptr);
+    @JvmOverloads
+    fun makeFromData(data: Data?, ttcIndex: Int = 0): Typeface? {
+        return try {
+            Stats.onNativeCall()
+            val ptr =
+                _nMakeFromData(ptr, getPtr(data), ttcIndex)
+            if (ptr == 0L) null else Typeface(ptr)
         } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(data);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(data)
         }
     }
 
-    public static class _DefaultHolder {
-        static { Stats.onNativeCall(); }
-        public static final FontMgr INSTANCE = new FontMgr(_nDefault(), false);
+    object _DefaultHolder {
+        /**
+         * Return the default fontmgr.
+         */
+        val default = FontMgr(_nDefault(), false)
+
+        init {
+            Stats.onNativeCall()
+        }
     }
 
-    /**
-     * Return the default fontmgr.
-     */
-    public static FontMgr getDefault() {
-        return _DefaultHolder.INSTANCE;
-    }
+    internal constructor(ptr: Long) : super(ptr)
 
-    @ApiStatus.Internal
-    public FontMgr(long ptr) {
-        super(ptr);
-    }
-
-    @ApiStatus.Internal
-    public FontMgr(long ptr, boolean allowClose) {
-        super(ptr, allowClose);
-    }
-
-    public static native int _nGetFamiliesCount(long ptr);
-    public static native String _nGetFamilyName(long ptr, int index);
-    public static native long _nMakeStyleSet(long ptr, int index);
-    public static native long _nMatchFamily(long ptr, String familyName);
-    public static native long _nMatchFamilyStyle(long ptr, String familyName, int fontStyle);
-    public static native long _nMatchFamilyStyleCharacter(long ptr, String familyName, int fontStyle, String[] bcp47, int character);
-    public static native long _nMakeFromData(long ptr, long dataPtr, int ttcIndex);
-    public static native long _nDefault();
+    internal constructor(ptr: Long, allowClose: Boolean) : super(ptr, allowClose)
 }

@@ -1,7 +1,7 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-public enum FontSlant {
+enum class FontSlant {
     UPRIGHT,
     ITALIC,
-    OBLIQUE
+    OBLIQUE,
 }
