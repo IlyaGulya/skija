@@ -1,140 +1,175 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import java.lang.ref.*;
-import org.jetbrains.annotations.*;
-import org.jetbrains.skija.impl.*;
-import org.jetbrains.skija.shaper.*;
+import org.jetbrains.annotations.ApiStatus.Internal
+import org.jetbrains.annotations.Contract
+import org.jetbrains.skija.impl.Library
+import org.jetbrains.skija.impl.Managed
+import org.jetbrains.skija.impl.Stats
+import org.jetbrains.skija.shaper.Shaper
+import java.lang.ref.Reference
 
-public class TextLine extends Managed {
-    static { Library.staticLoad(); }
-    
-    @ApiStatus.Internal
-    public TextLine(long ptr) {
-        super(ptr, _FinalizerHolder.PTR);
-    }
+class TextLine @Internal constructor(ptr: Long) : Managed(ptr, _FinalizerHolder.PTR) {
+    companion object {
+        @Contract("_, _ -> new")
+        fun make(text: String?, font: Font?): TextLine {
+            return make(text, font, null, true)
+        }
 
-    @ApiStatus.Internal
-    public static class _FinalizerHolder {
-        public static final long PTR = _nGetFinalizer();
-    }
+        @Contract("_, _, _, _ -> new")
+        fun make(text: String?, font: Font?, features: Array<FontFeature?>?, leftToRight: Boolean): TextLine {
+            Shaper.makeShapeDontWrapOrReorder()
+                .use { shaper -> return shaper.shapeLine(text, font, features, leftToRight) }
+        }
 
-    @NotNull @Contract("_, _ -> new")
-    public static TextLine make(String text, Font font) {
-        return make(text, font, null, true);
-    }
+        internal external fun _nGetFinalizer(): Long
 
-    @NotNull @Contract("_, _, _, _ -> new")
-    public static TextLine make(String text, Font font, @Nullable FontFeature[] features, boolean leftToRight) {
-        try (var shaper = Shaper.makeShapeDontWrapOrReorder();) {
-            return shaper.shapeLine(text, font, features, leftToRight);
+        internal external fun _nGetAscent(ptr: Long): Float
+
+        internal external fun _nGetCapHeight(ptr: Long): Float
+
+        internal external fun _nGetXHeight(ptr: Long): Float
+
+        internal external fun _nGetDescent(ptr: Long): Float
+
+        internal external fun _nGetLeading(ptr: Long): Float
+
+        internal external fun _nGetWidth(ptr: Long): Float
+
+        internal external fun _nGetHeight(ptr: Long): Float
+
+        internal external fun _nGetTextBlob(ptr: Long): Long
+
+        internal external fun _nGetGlyphs(ptr: Long): ShortArray
+
+        internal external fun _nGetPositions(ptr: Long): FloatArray
+
+        internal external fun _nGetRunPositions(ptr: Long): FloatArray?
+
+        internal external fun _nGetBreakPositions(ptr: Long): FloatArray?
+
+        internal external fun _nGetBreakOffsets(ptr: Long): IntArray?
+
+        internal external fun _nGetOffsetAtCoord(ptr: Long, x: Float): Int
+
+        internal external fun _nGetLeftOffsetAtCoord(ptr: Long, x: Float): Int
+
+        internal external fun _nGetCoordAtOffset(ptr: Long, offset: Int): Float
+
+        init {
+            Library.staticLoad()
         }
     }
 
-    public float getAscent() {
-        Stats.onNativeCall();
-        try {
-            return _nGetAscent(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
-        }
+    internal object _FinalizerHolder {
+        val PTR = _nGetFinalizer()
     }
 
-    public float getCapHeight() {
-        Stats.onNativeCall();
-        try {
-            return _nGetCapHeight(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
+    val ascent: Float
+        get() {
+            Stats.onNativeCall()
+            return try {
+                _nGetAscent(ptr)
+            } finally {
+                Reference.reachabilityFence(this)
+            }
         }
-    }
-
-    public float getXHeight() {
-        Stats.onNativeCall();
-        try {
-            return _nGetXHeight(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
+    val capHeight: Float
+        get() {
+            Stats.onNativeCall()
+            return try {
+                _nGetCapHeight(ptr)
+            } finally {
+                Reference.reachabilityFence(this)
+            }
         }
-    }
-
-    public float getDescent() {
-        Stats.onNativeCall();
-        try {
-            return _nGetDescent(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
+    val xHeight: Float
+        get() {
+            Stats.onNativeCall()
+            return try {
+                _nGetXHeight(ptr)
+            } finally {
+                Reference.reachabilityFence(this)
+            }
         }
-    }
-
-    public float getLeading() {
-        Stats.onNativeCall();
-        try {
-            return _nGetLeading(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
+    val descent: Float
+        get() {
+            Stats.onNativeCall()
+            return try {
+                _nGetDescent(ptr)
+            } finally {
+                Reference.reachabilityFence(this)
+            }
         }
-    }
-
-    public float getWidth() {
-        Stats.onNativeCall();
-        try {
-            return _nGetWidth(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
+    val leading: Float
+        get() {
+            Stats.onNativeCall()
+            return try {
+                _nGetLeading(ptr)
+            } finally {
+                Reference.reachabilityFence(this)
+            }
         }
-    }
-
-    public float getHeight() {
-        Stats.onNativeCall();
-        try {
-            return _nGetHeight(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
+    val width: Float
+        get() {
+            Stats.onNativeCall()
+            return try {
+                _nGetWidth(ptr)
+            } finally {
+                Reference.reachabilityFence(this)
+            }
         }
-    }
-
-    @Nullable
-    public TextBlob getTextBlob() {
-        Stats.onNativeCall();
-        try {
-            long res = _nGetTextBlob(_ptr);
-            return res == 0 ? null : new TextBlob(res);
-        } finally {
-            Reference.reachabilityFence(this);
+    val height: Float
+        get() {
+            Stats.onNativeCall()
+            return try {
+                _nGetHeight(ptr)
+            } finally {
+                Reference.reachabilityFence(this)
+            }
         }
-    }
-
-    public short[] getGlyphs() {
-        Stats.onNativeCall();
-        try {
-            return _nGetGlyphs(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
+    val textBlob: TextBlob?
+        get() {
+            Stats.onNativeCall()
+            return try {
+                val res = _nGetTextBlob(ptr)
+                if (res == 0L) null else TextBlob(res)
+            } finally {
+                Reference.reachabilityFence(this)
+            }
         }
-    }    
+    val glyphs: ShortArray
+        get() {
+            Stats.onNativeCall()
+            return try {
+                _nGetGlyphs(ptr)
+            } finally {
+                Reference.reachabilityFence(this)
+            }
+        }
 
     /**
      * @return  [x0, y0, x1, y1, ...]
      */
-    public float[] getPositions() {
-        Stats.onNativeCall();
-        try {
-            return _nGetPositions(_ptr);
-        } finally {
-            Reference.reachabilityFence(this);
+    val positions: FloatArray
+        get() {
+            Stats.onNativeCall()
+            return try {
+                _nGetPositions(ptr)
+            } finally {
+                Reference.reachabilityFence(this)
+            }
         }
-    }
 
     /**
      * @param x  coordinate in px
      * @return   UTF-16 offset of glyph
      */
-    public int getOffsetAtCoord(float x) {
-        try {
-            Stats.onNativeCall();
-            return _nGetOffsetAtCoord(_ptr, x);
+    fun getOffsetAtCoord(x: Float): Int {
+        return try {
+            Stats.onNativeCall()
+            _nGetOffsetAtCoord(ptr, x)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
@@ -142,12 +177,12 @@ public class TextLine extends Managed {
      * @param x  coordinate in px
      * @return   UTF-16 offset of glyph strictly left of coord
      */
-    public int getLeftOffsetAtCoord(float x) {
-        try {
-            Stats.onNativeCall();
-            return _nGetLeftOffsetAtCoord(_ptr, x);
+    fun getLeftOffsetAtCoord(x: Float): Int {
+        return try {
+            Stats.onNativeCall()
+            _nGetLeftOffsetAtCoord(ptr, x)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
@@ -155,66 +190,48 @@ public class TextLine extends Managed {
      * @param offset  UTF-16 character offset
      * @return        glyph coordinate
      */
-    public float getCoordAtOffset(int offset) {
-        try {
-            Stats.onNativeCall();
-            return _nGetCoordAtOffset(_ptr, offset);
+    fun getCoordAtOffset(offset: Int): Float {
+        return try {
+            Stats.onNativeCall()
+            _nGetCoordAtOffset(ptr, offset)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
-     * <p>Returns the number of intervals that intersect bounds.
+     *
+     * Returns the number of intervals that intersect bounds.
      * bounds describes a pair of lines parallel to the text advance.
      * The return array size is a multiple of two, and is at most twice the number of glyphs in
-     * the the blob.</p>
+     * the the blob.
      *
      * @param lowerBound lower line parallel to the advance
      * @param upperBound upper line parallel to the advance
      * @return           intersections; may be null
      */
-    @Nullable
-    public float[] getIntercepts(float lowerBound, float upperBound) {
-        return getIntercepts(lowerBound, upperBound, null);
+    fun getIntercepts(lowerBound: Float, upperBound: Float): FloatArray? {
+        return getIntercepts(lowerBound, upperBound, null)
     }
 
     /**
-     * <p>Returns the number of intervals that intersect bounds.
+     *
+     * Returns the number of intervals that intersect bounds.
      * bounds describes a pair of lines parallel to the text advance.
      * The return array size is a multiple of two, and is at most twice the number of glyphs in
-     * the the blob.</p>
+     * the the blob.
      *
      * @param lowerBound lower line parallel to the advance
      * @param upperBound upper line parallel to the advance
      * @param paint      specifies stroking, PathEffect that affects the result; may be null
      * @return           intersections; may be null
      */
-    @Nullable
-    public float[] getIntercepts(float lowerBound, float upperBound, @Nullable Paint paint) {
-        try (var blob = getTextBlob()) {
-            return blob == null ? null : blob.getIntercepts(lowerBound, upperBound, paint);
+    fun getIntercepts(lowerBound: Float, upperBound: Float, paint: Paint?): FloatArray? {
+        try {
+            textBlob.use { blob -> return blob?.getIntercepts(lowerBound, upperBound, paint) }
         } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(paint);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(paint)
         }
     }
-
-    @ApiStatus.Internal public static native long  _nGetFinalizer();
-    @ApiStatus.Internal public static native float _nGetAscent(long ptr);
-    @ApiStatus.Internal public static native float _nGetCapHeight(long ptr);
-    @ApiStatus.Internal public static native float _nGetXHeight(long ptr);
-    @ApiStatus.Internal public static native float _nGetDescent(long ptr);
-    @ApiStatus.Internal public static native float _nGetLeading(long ptr);
-    @ApiStatus.Internal public static native float _nGetWidth(long ptr);
-    @ApiStatus.Internal public static native float _nGetHeight(long ptr);
-    @ApiStatus.Internal public static native long  _nGetTextBlob(long ptr);
-    @ApiStatus.Internal public static native short[] _nGetGlyphs(long ptr);
-    @ApiStatus.Internal public static native float[] _nGetPositions(long ptr);
-    @ApiStatus.Internal public static native float[] _nGetRunPositions(long ptr);
-    @ApiStatus.Internal public static native float[] _nGetBreakPositions(long ptr);
-    @ApiStatus.Internal public static native int[]   _nGetBreakOffsets(long ptr);
-    @ApiStatus.Internal public static native int   _nGetOffsetAtCoord(long ptr, float x);
-    @ApiStatus.Internal public static native int   _nGetLeftOffsetAtCoord(long ptr, float x);
-    @ApiStatus.Internal public static native float _nGetCoordAtOffset(long ptr, int offset);
 }

@@ -1,173 +1,200 @@
-package org.jetbrains.skija;
+package org.jetbrains.skija
 
-import java.lang.ref.*;
-import java.util.*;
-import org.jetbrains.annotations.*;
-import org.jetbrains.skija.impl.*;
+import org.jetbrains.annotations.ApiStatus.Internal
+import org.jetbrains.skija.impl.Library
+import org.jetbrains.skija.impl.Native
+import org.jetbrains.skija.impl.RefCnt
+import org.jetbrains.skija.impl.Stats
+import java.lang.ref.Reference
+import java.util.*
 
-public class Typeface extends RefCnt {
-    static { Library.staticLoad(); }
-    
+class Typeface @Internal constructor(ptr: Long) : RefCnt(ptr) {
+    companion object {
+        /**
+         * @return  the default normal typeface, which is never null
+         */
+        fun makeDefault(): Typeface {
+            Stats.onNativeCall()
+            return Typeface(_nMakeDefault())
+        }
+
+        /**
+         * Creates a new reference to the typeface that most closely matches the
+         * requested name and style. This method allows extended font
+         * face specifiers as in the [FontStyle] type. Will never return null.
+         * @param name   May be null. The name of the font family
+         * @param style  The style of the typeface
+         * @return       reference to the closest-matching typeface
+         */
+        fun makeFromName(name: String?, style: FontStyle): Typeface {
+            Stats.onNativeCall()
+            return Typeface(_nMakeFromName(name, style._value))
+        }
+        /**
+         * @return  a new typeface given a file
+         * @throws IllegalArgumentException  If the file does not exist, or is not a valid font file
+         */
+        /**
+         * @return  a new typeface given a file
+         * @throws IllegalArgumentException  If the file does not exist, or is not a valid font file
+         */
+        @JvmOverloads
+        fun makeFromFile(path: String, index: Int = 0): Typeface {
+            Stats.onNativeCall()
+            val ptr = _nMakeFromFile(path, index)
+            require(ptr != 0L) { "Failed to create Typeface from path=\"$path\" index=$index" }
+            return Typeface(ptr)
+        }
+        /**
+         * @return  a new typeface given a Data
+         * @throws IllegalArgumentException  If the data is null, or is not a valid font file
+         */
+        /**
+         * @return  a new typeface given a Data
+         * @throws IllegalArgumentException  If the data is null, or is not a valid font file
+         */
+        @JvmOverloads
+        fun makeFromData(data: Data, index: Int = 0): Typeface {
+            return try {
+                Stats.onNativeCall()
+                val ptr = _nMakeFromData(getPtr(data), index)
+                require(ptr != 0L) { "Failed to create Typeface from data $data" }
+                Typeface(ptr)
+            } finally {
+                Reference.reachabilityFence(data)
+            }
+        }
+
+        internal external fun _nGetFontStyle(ptr: Long): Int
+
+        internal external fun _nIsFixedPitch(ptr: Long): Boolean
+
+        internal external fun _nGetVariations(ptr: Long): Array<FontVariation>
+
+        internal external fun _nGetVariationAxes(ptr: Long): Array<FontVariationAxis>
+
+        internal external fun _nGetUniqueId(ptr: Long): Int
+
+        internal external fun _nEquals(ptr: Long, otherPtr: Long): Boolean
+
+        internal external fun _nMakeDefault(): Long
+
+        internal external fun _nMakeFromName(name: String?, fontStyle: Int): Long
+
+        internal external fun _nMakeFromFile(path: String?, index: Int): Long
+
+        internal external fun _nMakeFromData(dataPtr: Long, index: Int): Long
+
+        internal external fun _nMakeClone(ptr: Long, variations: Array<FontVariation>?, collectionIndex: Int): Long
+
+        internal external fun _nGetUTF32Glyphs(ptr: Long, uni: IntArray?): ShortArray
+
+        internal external fun _nGetUTF32Glyph(ptr: Long, unichar: Int): Short
+
+        internal external fun _nGetGlyphsCount(ptr: Long): Int
+
+        internal external fun _nGetTablesCount(ptr: Long): Int
+
+        internal external fun _nGetTableTags(ptr: Long): IntArray
+
+        internal external fun _nGetTableSize(ptr: Long, tag: Int): Long
+
+        internal external fun _nGetTableData(ptr: Long, tag: Int): Long
+
+        internal external fun _nGetUnitsPerEm(ptr: Long): Int
+
+        internal external fun _nGetKerningPairAdjustments(ptr: Long, glyphs: ShortArray?): IntArray
+
+        internal external fun _nGetFamilyNames(ptr: Long): Array<String>
+
+        internal external fun _nGetFamilyName(ptr: Long): String
+
+        internal external fun _nGetBounds(ptr: Long): Rect
+
+        init {
+            Library.staticLoad()
+        }
+    }
+
     /**
      * @return  the typeface’s intrinsic style attributes
      */
-    public FontStyle getFontStyle() {
-        try {
-            Stats.onNativeCall();
-            return new FontStyle(_nGetFontStyle(_ptr));
+    val fontStyle: FontStyle
+        get() = try {
+            Stats.onNativeCall()
+            FontStyle(_nGetFontStyle(ptr))
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
-     * @return  true if {@link #getFontStyle()} has the bold bit set
+     * @return  true if [.getFontStyle] has the bold bit set
      */
-    public boolean isBold() {
-        return getFontStyle().getWeight() >= FontWeight.SEMI_BOLD;
-    }
+    val isBold: Boolean
+        get() = fontStyle.weight >= FontWeight.SEMI_BOLD
 
     /**
-     * @return  true if {@link #getFontStyle()} has the italic bit set
+     * @return  true if [.getFontStyle] has the italic bit set
      */
-    public boolean isItalic() {
-        return getFontStyle().getSlant() != FontSlant.UPRIGHT;
-    }
+    val isItalic: Boolean
+        get() = fontStyle.slant != FontSlant.UPRIGHT
 
-    /** 
+    /**
      * This is a style bit, advance widths may vary even if this returns true.
      * @return  true if the typeface claims to be fixed-pitch
      */
-    public boolean isFixedPitch() {
-        try {
-            Stats.onNativeCall();
-            return _nIsFixedPitch(_ptr);
+    val isFixedPitch: Boolean
+        get() = try {
+            Stats.onNativeCall()
+            _nIsFixedPitch(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
      * It is possible the number of axes can be retrieved but actual position cannot.
      * @return  the variation coordinates describing the position of this typeface in design variation space, null if there’s no variations
      */
-    @Nullable
-    public FontVariation[] getVariations() {
-        try {
-            Stats.onNativeCall();
-            return _nGetVariations(_ptr);
+    val variations: Array<FontVariation>
+        get() = try {
+            Stats.onNativeCall()
+            _nGetVariations(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
-        /**
+    /**
      * It is possible the number of axes can be retrieved but actual position cannot.
      * @return  the variation coordinates describing the position of this typeface in design variation space, null if there’s no variations
      */
-    @Nullable
-    public FontVariationAxis[] getVariationAxes() {
-        try {
-            Stats.onNativeCall();
-            return _nGetVariationAxes(_ptr);
+    val variationAxes: Array<FontVariationAxis>
+        get() = try {
+            Stats.onNativeCall()
+            _nGetVariationAxes(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
      * @return  a 32bit value for this typeface, unique for the underlying font data. Never 0
      */
-    public int getUniqueId() {
-        try {
-            Stats.onNativeCall();
-            return _nGetUniqueId(_ptr);
+    val uniqueId: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGetUniqueId(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
      * @return  true if the two typefaces reference the same underlying font, treating null as the default font
      */
-    @ApiStatus.Internal @Override
-    public boolean _nativeEquals(Native other) {
-        try {
-            return _nEquals(_ptr, Native.getPtr(other));
+    override fun _nativeEquals(other: Native): Boolean {
+        return try {
+            _nEquals(ptr, getPtr(other))
         } finally {
-            Reference.reachabilityFence(this);
-            Reference.reachabilityFence(other);
-        }
-    }
-
-    /**
-     * @return  the default normal typeface, which is never null
-     */
-    @NotNull
-    public static Typeface makeDefault() {
-        Stats.onNativeCall();
-        return new Typeface(_nMakeDefault());
-    }
-
-    /**
-     * Creates a new reference to the typeface that most closely matches the
-     * requested name and style. This method allows extended font
-     * face specifiers as in the {@link FontStyle} type. Will never return null.
-     * @param name   May be null. The name of the font family
-     * @param style  The style of the typeface
-     * @return       reference to the closest-matching typeface
-     */
-    @NotNull
-    public static Typeface makeFromName(String name, FontStyle style) {
-        Stats.onNativeCall();
-        return new Typeface(_nMakeFromName(name, style._value));
-    }
-
-    /**
-     * @return  a new typeface given a file
-     * @throws IllegalArgumentException  If the file does not exist, or is not a valid font file
-     */
-    @NotNull
-    public static Typeface makeFromFile(String path) {
-        return makeFromFile(path, 0);
-    }
-
-    /**
-     * @return  a new typeface given a file
-     * @throws IllegalArgumentException  If the file does not exist, or is not a valid font file
-     */
-    @NotNull
-    public static Typeface makeFromFile(String path, int index) {
-        Stats.onNativeCall();
-        long ptr = _nMakeFromFile(path, index);
-        if (ptr == 0)
-            throw new IllegalArgumentException("Failed to create Typeface from path=\"" + path + "\" index=" + index);
-        return new Typeface(ptr);
-    }
-
-    /**
-     * @return  a new typeface given a Data
-     * @throws IllegalArgumentException  If the data is null, or is not a valid font file
-     */
-    @NotNull
-    public static Typeface makeFromData(Data data) {
-        return makeFromData(data, 0);
-    }
-
-    /**
-     * @return  a new typeface given a Data
-     * @throws IllegalArgumentException  If the data is null, or is not a valid font file
-     */
-    @NotNull
-    public static Typeface makeFromData(Data data, int index) {
-        try {
-            Stats.onNativeCall();
-            long ptr = _nMakeFromData(Native.getPtr(data), index);
-            if (ptr == 0)
-                throw new IllegalArgumentException("Failed to create Typeface from data " + data);
-            return new Typeface(ptr);
-        } finally {
-            Reference.reachabilityFence(data);
+            Reference.reachabilityFence(this)
+            Reference.reachabilityFence(other)
         }
     }
 
@@ -178,10 +205,9 @@ public class Typeface extends RefCnt {
      * @return  same typeface if variation already matches, new typeface otherwise
      * @throws IllegalArgumentException  on failure
      */
-    public Typeface makeClone(FontVariation variation) {
-        return makeClone(new FontVariation[] { variation }, 0);
+    fun makeClone(variation: FontVariation): Typeface {
+        return makeClone(arrayOf(variation), 0)
     }
-
     /**
      * Return a new typeface based on this typeface but parameterized as specified in the
      * variations. If the variations does not supply an argument for a parameter
@@ -189,10 +215,6 @@ public class Typeface extends RefCnt {
      * @return  same typeface if all variation already match, new typeface otherwise
      * @throws IllegalArgumentException  on failure
      */
-    public Typeface makeClone(FontVariation[] variations) {
-        return makeClone(variations, 0);
-    }
-
     /**
      * Return a new typeface based on this typeface but parameterized as specified in the
      * variations. If the variations does not supply an argument for a parameter
@@ -200,101 +222,103 @@ public class Typeface extends RefCnt {
      * @return  same typeface if all variation already match, new typeface otherwise
      * @throws IllegalArgumentException  on failure
      */
-    public Typeface makeClone(FontVariation[] variations, int collectionIndex) {
-        try {
-            if (variations.length == 0)
-                return this;
-            Stats.onNativeCall();
-            long ptr = _nMakeClone(_ptr, variations, collectionIndex);
-            if (ptr == 0)
-                throw new IllegalArgumentException("Failed to clone Typeface " + this + " with " + Arrays.toString(variations));
-            return new Typeface(ptr);
+    @JvmOverloads
+    fun makeClone(variations: Array<FontVariation>, collectionIndex: Int = 0): Typeface {
+        return try {
+            if (variations.size == 0) return this
+            Stats.onNativeCall()
+            val ptr = _nMakeClone(ptr, variations, collectionIndex)
+            require(ptr != 0L) {
+                "Failed to clone Typeface $this with " + Arrays.toString(
+                    variations
+                )
+            }
+            Typeface(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
-     *  Given a string, returns corresponding glyph ids.
+     * Given a string, returns corresponding glyph ids.
      *
-     *  @return  the corresponding glyph ids for each character.
+     * @return  the corresponding glyph ids for each character.
      */
-    public short[] getStringGlyphs(String s) {
-        return getUTF32Glyphs(s.codePoints().toArray());
+    fun getStringGlyphs(s: String): ShortArray {
+        return getUTF32Glyphs(s.codePoints().toArray())
     }
 
     /**
-     *  Given an array of UTF32 character codes, return their corresponding glyph IDs.
+     * Given an array of UTF32 character codes, return their corresponding glyph IDs.
      *
-     *  @return  the corresponding glyph IDs for each character.
+     * @return  the corresponding glyph IDs for each character.
      */
-    public short[] getUTF32Glyphs(int[] uni) {
-        try {
-            Stats.onNativeCall();
-            return _nGetUTF32Glyphs(_ptr, uni);
+    fun getUTF32Glyphs(uni: IntArray?): ShortArray {
+        return try {
+            Stats.onNativeCall()
+            _nGetUTF32Glyphs(ptr, uni)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
-     *  This is a short-cut for calling {@link #getUTF32Glyphs(int[])}.
-     *  @return  the glyph that corresponds to the specified unicode code-point (in UTF32 encoding). If the unichar is not supported, returns 0
+     * This is a short-cut for calling [.getUTF32Glyphs].
+     * @return  the glyph that corresponds to the specified unicode code-point (in UTF32 encoding). If the unichar is not supported, returns 0
      */
-    public short getUTF32Glyph(int unichar) {
-        try {
-            Stats.onNativeCall();
-            return _nGetUTF32Glyph(_ptr, unichar);
+    fun getUTF32Glyph(unichar: Int): Short {
+        return try {
+            Stats.onNativeCall()
+            _nGetUTF32Glyph(ptr, unichar)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
      * @return  the number of glyphs in the typeface
      */
-    public int getGlyphsCount() {
-        try {
-            Stats.onNativeCall();
-            return _nGetGlyphsCount(_ptr);
+    val glyphsCount: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGetGlyphsCount(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
-    /** 
+    /**
      * @return  the number of tables in the font
      */
-    public int getTablesCount() {
-        try {
-            Stats.onNativeCall();
-            return _nGetTablesCount(_ptr);
+    val tablesCount: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGetTablesCount(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
      * @return  the list of table tags in the font
      */
-    public String[] getTableTags() {
-        try {
-            Stats.onNativeCall();
-            return Arrays.stream(_nGetTableTags(_ptr)).mapToObj(FourByteTag::toString).toArray(String[]::new);
+    val tableTags: Array<String>
+        get() = try {
+            Stats.onNativeCall()
+            _nGetTableTags(ptr)
+                .map { FourByteTag.toString(it) }
+                .toTypedArray()
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
      * Given a table tag, return the size of its contents, or 0 if not present
      */
-    public long getTableSize(String tag) {
-        try {
-            Stats.onNativeCall();
-            return _nGetTableSize(_ptr, FourByteTag.fromString(tag));
+    fun getTableSize(tag: String): Long {
+        return try {
+            Stats.onNativeCall()
+            _nGetTableSize(ptr, FourByteTag.fromString(tag))
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
@@ -305,115 +329,80 @@ public class Typeface extends RefCnt {
      * @param tag  The table tag whose contents are to be copied
      * @return     an immutable copy of the table's data, or null
      */
-    @Nullable
-    public Data getTableData(String tag) {
-        try {
-            Stats.onNativeCall();
-            long ptr = _nGetTableData(_ptr, FourByteTag.fromString(tag));
-            return ptr == 0 ? null : new Data(ptr);
+    fun getTableData(tag: String): Data? {
+        return try {
+            Stats.onNativeCall()
+            val ptr = _nGetTableData(ptr, FourByteTag.fromString(tag))
+            if (ptr == 0L) null else Data(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
      * @return  the units-per-em value for this typeface, or zero if there is an error
      */
-    public int getUnitsPerEm() {
-        try {
-            Stats.onNativeCall();
-            return _nGetUnitsPerEm(_ptr);
+    val unitsPerEm: Int
+        get() = try {
+            Stats.onNativeCall()
+            _nGetUnitsPerEm(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
      * Given a run of glyphs, return the associated horizontal adjustments.
      * Adjustments are in "design units", which are integers relative to the
-     * typeface's units per em (see {@link #getUnitsPerEm()}).
+     * typeface's units per em (see [.getUnitsPerEm]).
      *
      * Some typefaces are known to never support kerning. Calling this with null,
      * if it returns null then it will always return null (no kerning) for all
      * possible glyph runs. If it returns int[0], then it *may* return non-null
      * adjustments for some glyph runs.
-     * 
+     *
      * @return  adjustment array (one less than glyphs), or null if no kerning should be applied
      */
-    @Nullable
-    public int[] getKerningPairAdjustments(short[] glyphs) {
-        try {
-            Stats.onNativeCall();
-            return _nGetKerningPairAdjustments(_ptr, glyphs);
+    fun getKerningPairAdjustments(glyphs: ShortArray?): IntArray {
+        return try {
+            Stats.onNativeCall()
+            _nGetKerningPairAdjustments(ptr, glyphs)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
     }
 
     /**
      * @return  all of the family names specified by the font
      */
-    public String[] getFamilyNames() {
-        try {
-            Stats.onNativeCall();
-            return _nGetFamilyNames(_ptr);
+    val familyNames: Array<String>
+        get() = try {
+            Stats.onNativeCall()
+            _nGetFamilyNames(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
      * @return  the family name for this typeface. The language of the name is whatever the host platform chooses
      */
-    public String getFamilyName() {
-        try {
-            Stats.onNativeCall();
-            return _nGetFamilyName(_ptr);
+    val familyName: String
+        get() = try {
+            Stats.onNativeCall()
+            _nGetFamilyName(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
 
     /**
      * Return a rectangle (scaled to 1-pt) that represents the union of the bounds of all
      * of the glyphs, but each one positioned at (0,). This may be conservatively large, and
      * will not take into account any hinting or other size-specific adjustments.
      */
-    public Rect getBounds() {
-        try {
-            Stats.onNativeCall();
-            return _nGetBounds(_ptr);
+    val bounds: Rect
+        get() = try {
+            Stats.onNativeCall()
+            _nGetBounds(ptr)
         } finally {
-            Reference.reachabilityFence(this);
+            Reference.reachabilityFence(this)
         }
-    }
-
-    @ApiStatus.Internal
-    public Typeface(long ptr) {
-        super(ptr);
-    }
-
-    @ApiStatus.Internal public static native int      _nGetFontStyle(long ptr);
-    @ApiStatus.Internal public static native boolean  _nIsFixedPitch(long ptr);
-    @ApiStatus.Internal public static native FontVariation[] _nGetVariations(long ptr);
-    @ApiStatus.Internal public static native FontVariationAxis[] _nGetVariationAxes(long ptr);
-    @ApiStatus.Internal public static native int      _nGetUniqueId(long ptr);
-    @ApiStatus.Internal public static native boolean  _nEquals(long ptr, long otherPtr);
-    @ApiStatus.Internal public static native long     _nMakeDefault();
-    @ApiStatus.Internal public static native long     _nMakeFromName(String name, int fontStyle);
-    @ApiStatus.Internal public static native long     _nMakeFromFile(String path, int index);
-    @ApiStatus.Internal public static native long     _nMakeFromData(long dataPtr, int index);
-    @ApiStatus.Internal public static native long     _nMakeClone(long ptr, FontVariation[] variations, int collectionIndex);
-    @ApiStatus.Internal public static native short[]  _nGetUTF32Glyphs(long ptr, int[] uni);
-    @ApiStatus.Internal public static native short    _nGetUTF32Glyph(long ptr, int unichar);
-    @ApiStatus.Internal public static native int      _nGetGlyphsCount(long ptr);
-    @ApiStatus.Internal public static native int      _nGetTablesCount(long ptr);
-    @ApiStatus.Internal public static native int[]    _nGetTableTags(long ptr);
-    @ApiStatus.Internal public static native long     _nGetTableSize(long ptr, int tag);
-    @ApiStatus.Internal public static native long     _nGetTableData(long ptr, int tag);
-    @ApiStatus.Internal public static native int      _nGetUnitsPerEm(long ptr);
-    @ApiStatus.Internal public static native int[]    _nGetKerningPairAdjustments(long ptr, short[] glyphs);
-    @ApiStatus.Internal public static native String[] _nGetFamilyNames(long ptr);
-    @ApiStatus.Internal public static native String   _nGetFamilyName(long ptr);
-    @ApiStatus.Internal public static native Rect     _nGetBounds(long ptr);
 }
